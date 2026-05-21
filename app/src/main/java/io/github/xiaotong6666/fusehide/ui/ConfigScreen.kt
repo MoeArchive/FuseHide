@@ -160,7 +160,6 @@ fun ConfigScreen(
                     Checkbox(
                         state = if (state.enableHideAllRootEntries) ToggleableState.On else ToggleableState.Off,
                         onClick = {
-                            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                             callbacks.onEnableHideAllRootEntriesChanged(!state.enableHideAllRootEntries)
                         },
                     )
