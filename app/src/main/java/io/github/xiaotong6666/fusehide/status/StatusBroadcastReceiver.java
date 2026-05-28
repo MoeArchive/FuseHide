@@ -51,7 +51,7 @@ public final class StatusBroadcastReceiver extends BroadcastReceiver {
     private void handleGetStatus(Intent intent) {
         try {
             Log.d("FuseHide", "recv " + intent);
-            PendingIntent pendingIntent = intent.getParcelableExtra("EXTRA_PENDING_INTENT");
+            PendingIntent pendingIntent = intent.getParcelableExtra("EXTRA_PENDING_INTENT", PendingIntent.class);
             if (pendingIntent == null) {
                 Log.e("FuseHide", "no pendingintent?");
                 return;
@@ -62,7 +62,9 @@ public final class StatusBroadcastReceiver extends BroadcastReceiver {
             }
 
             Intent statusIntent = new Intent(ACTION_SET_STATUS).setPackage(APP_PACKAGE);
-            statusIntent.putExtra("EXTRA_PENDING_INTENT", PendingIntent.getBroadcast(owner, 1, statusIntent, 67108864));
+            statusIntent.putExtra(
+                    "EXTRA_PENDING_INTENT",
+                    PendingIntent.getBroadcast(owner, 1, statusIntent, PendingIntent.FLAG_IMMUTABLE));
             statusIntent.putExtra("EXTRA_PID", Process.myPid());
             if (statusIntent.getExtras() != null) {
                 statusIntent
@@ -79,7 +81,7 @@ public final class StatusBroadcastReceiver extends BroadcastReceiver {
         MainActivity mainActivity = (MainActivity) owner;
         try {
             Log.d("FuseHide", "recv status " + intent);
-            PendingIntent pendingIntent = intent.getParcelableExtra("EXTRA_PENDING_INTENT");
+            PendingIntent pendingIntent = intent.getParcelableExtra("EXTRA_PENDING_INTENT", PendingIntent.class);
             if (pendingIntent == null) {
                 Log.e("FuseHide", "status pendingintent missing");
                 return;

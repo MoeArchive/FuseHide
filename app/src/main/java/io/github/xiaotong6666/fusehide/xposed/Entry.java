@@ -16,7 +16,6 @@
 
 package io.github.xiaotong6666.fusehide.xposed;
 
-import android.app.AndroidAppHelper;
 import android.app.Application;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -28,17 +27,16 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import androidx.core.content.ContextCompat;
-import de.robv.android.xposed.IXposedHookLoadPackage;
-import de.robv.android.xposed.XC_MethodHook;
-import de.robv.android.xposed.XposedHelpers;
-import de.robv.android.xposed.callbacks.XC_LoadPackage;
+import io.github.libxposed.api.XposedModule;
+import io.github.libxposed.api.XposedModuleInterface.PackageLoadedParam;
 import io.github.xiaotong6666.fusehide.config.HideConfig;
 import io.github.xiaotong6666.fusehide.config.HideConfigNativeBridge;
 import io.github.xiaotong6666.fusehide.config.HideConfigStore;
 import io.github.xiaotong6666.fusehide.config.PackageHideRule;
 import io.github.xiaotong6666.fusehide.status.StatusBroadcastReceiver;
+import java.lang.reflect.Method;
 
-public class Entry implements IXposedHookLoadPackage {
+public class Entry extends XposedModule {
     private static final String APP_PACKAGE = "io.github.xiaotong6666.fusehide";
     private static final String ACTION_GET_STATUS = APP_PACKAGE + ".GET_STATUS";
     private static final String PACKAGE_MEDIA = "com.android.providers.media.module";
@@ -46,8 +44,8 @@ public class Entry implements IXposedHookLoadPackage {
     private static final long CONFIG_RETRY_DELAY_MS = 15000L;
     private static final int CONFIG_MAX_RETRIES = 8;
 
-    private Handler mainHandler;
-    private Application hookedApplication;
+    private volatile Handler mainHandler;
+    private volatile Application hookedApplication;
     private boolean configLoadCompleted;
     private boolean configLoadInFlight;
     private int pendingConfigRetryCount;
@@ -59,10 +57,17 @@ public class Entry implements IXposedHookLoadPackage {
     };
 
     private Handler getMainHandler() {
-        if (mainHandler == null) {
-            mainHandler = new Handler(Looper.getMainLooper());
+        Handler h = mainHandler;
+        if (h == null) {
+            synchronized (this) {
+                h = mainHandler;
+                if (h == null) {
+                    h = new Handler(Looper.getMainLooper());
+                    mainHandler = h;
+                }
+            }
         }
-        return mainHandler;
+        return h;
     }
 
     private static java.util.List<String> splitRuleLines(String value) {
@@ -187,58 +192,86 @@ public class Entry implements IXposedHookLoadPackage {
     }
 
     @Override
-    public void handleLoadPackage(XC_LoadPackage.LoadPackageParam loadPackageParam) {
-        try {
-            if (PACKAGE_MEDIA.equals(loadPackageParam.packageName)
-                    || PACKAGE_MEDIA_GOOGLE.equals(loadPackageParam.packageName)) {
-                System.loadLibrary("fusehide");
-                Log.d("FuseHide", "injected");
-                if ((loadPackageParam.appInfo.flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
-                    try {
-                        XposedHelpers.findAndHookMethod(
-                                "com.android.providers.media.MediaProvider",
-                                loadPackageParam.classLoader,
-                                "isUidAllowedAccessToDataOrObbPathForFuse",
-                                int.class,
-                                String.class,
-                                new XC_MethodHook() {
-                                    @Override
-                                    protected void afterHookedMethod(MethodHookParam param) {
-                                        Log.d(
-                                                "FuseHide",
-                                                "isUidAllowedAccessToDataOrObbPathForFuse uid="
-                                                        + param.args[0]
-                                                        + " path="
-                                                        + param.args[1]
-                                                        + " result="
-                                                        + param.getResult());
-                                    }
-                                });
-                    } catch (Throwable th) {
-                        Log.e("FuseHide", "hook isUidAllowedAccessToDataOrObbPathForFuse", th);
-                    }
-                }
-                new Handler(Looper.getMainLooper()).post(new MainThreadTask(0, this));
+    public void onPackageLoaded(@androidx.annotation.NonNull PackageLoadedParam param) {
+        final String packageName = param.getPackageName();
+        if (!PACKAGE_MEDIA.equals(packageName) && !PACKAGE_MEDIA_GOOGLE.equals(packageName)) {
+            return;
+        }
+
+        System.loadLibrary("fusehide");
+        Log.d("FuseHide", "injected");
+
+        final ClassLoader classLoader = param.getDefaultClassLoader();
+
+        hookApplicationAttach(classLoader);
+
+        if ((param.getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
+            try {
+                Class<?> mediaProviderClass = classLoader.loadClass("com.android.providers.media.MediaProvider");
+                Method targetMethod = mediaProviderClass.getMethod(
+                        "isUidAllowedAccessToDataOrObbPathForFuse", int.class, String.class);
+                hook(targetMethod).intercept(chain -> {
+                    Object result = chain.proceed();
+                    Log.d(
+                            "FuseHide",
+                            "isUidAllowedAccessToDataOrObbPathForFuse uid="
+                                    + chain.getArgs().get(0)
+                                    + " path="
+                                    + chain.getArgs().get(1)
+                                    + " result="
+                                    + result);
+                    return result;
+                });
+            } catch (Throwable th) {
+                Log.e("FuseHide", "hook isUidAllowedAccessToDataOrObbPathForFuse", th);
             }
+        }
+    }
+
+    private void hookApplicationAttach(ClassLoader classLoader) {
+        try {
+            Class<?> applicationClass = classLoader.loadClass("android.app.Application");
+            Method attachMethod = applicationClass.getDeclaredMethod("attach", Context.class);
+            hook(attachMethod).intercept(chain -> {
+                Object result = chain.proceed();
+                if (hookedApplication == null) {
+                    Application app = (Application) chain.getThisObject();
+                    hookedApplication = app;
+                    Log.d("FuseHide", "captured Application via attach hook");
+                    new Handler(Looper.getMainLooper()).post(new MainThreadTask(0, this));
+                }
+                return result;
+            });
         } catch (Throwable th) {
-            Log.e("FuseHide", "handleLoadPackage", th);
+            Log.e("FuseHide", "hook Application.attach", th);
         }
     }
 
     public void registerStatusReceiver() {
         try {
-            Application application = AndroidAppHelper.currentApplication();
+            Application application = hookedApplication;
             if (application == null) {
-                Log.e("FuseHide", "app is null??");
-                return;
+                // Fallback: try to get via ActivityThread
+                try {
+                    Class<?> atClass = Class.forName("android.app.ActivityThread");
+                    Method currentAT = atClass.getDeclaredMethod("currentActivityThread");
+                    Object at = currentAT.invoke(null);
+                    Method getApp = atClass.getDeclaredMethod("getApplication");
+                    application = (Application) getApp.invoke(at);
+                } catch (Throwable th) {
+                    Log.e("FuseHide", "app is null??", th);
+                    return;
+                }
             }
+
             hookedApplication = application;
-            StatusBroadcastReceiver receiver = new StatusBroadcastReceiver(application, 0);
+            final Application app = application;
+            StatusBroadcastReceiver receiver = new StatusBroadcastReceiver(app, 0);
             IntentFilter filter = new IntentFilter(ACTION_GET_STATUS);
             if (Build.VERSION.SDK_INT >= 33) {
-                application.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED);
+                app.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED);
             } else {
-                ContextCompat.registerReceiver(application, receiver, filter, ContextCompat.RECEIVER_EXPORTED);
+                ContextCompat.registerReceiver(app, receiver, filter, ContextCompat.RECEIVER_EXPORTED);
             }
 
             BroadcastReceiver configReceiver = new BroadcastReceiver() {
@@ -246,25 +279,24 @@ public class Entry implements IXposedHookLoadPackage {
                 public void onReceive(Context context, Intent intent) {
                     final PendingResult pendingResult = goAsync();
                     final String requestedToken = intent.getStringExtra(HideConfigStore.EXTRA_RELOAD_TOKEN);
-                    final android.os.Bundle bundle = HideConfigStore.loadViaProviderBundle(application);
+                    final android.os.Bundle bundle = HideConfigStore.loadViaProviderBundle(app);
                     final String providerToken = HideConfigStore.reloadTokenFromBundle(bundle);
                     final boolean providerTokenMatches = requestedToken != null && requestedToken.equals(providerToken);
                     if (bundle != null && providerTokenMatches) {
-                        finishConfigReload(application, requestedToken, bundle, "provider", pendingResult);
+                        finishConfigReload(app, requestedToken, bundle, "provider", pendingResult);
                         return;
                     }
                     HideConfigStore.requestInjectedProcessConfigBundle(
-                            application,
+                            app,
                             fallbackBundle -> finishConfigReload(
-                                    application, requestedToken, fallbackBundle, "broadcast_fallback", pendingResult));
+                                    app, requestedToken, fallbackBundle, "broadcast_fallback", pendingResult));
                 }
             };
             IntentFilter configFilter = new IntentFilter(HideConfigStore.ACTION_RELOAD_HIDE_CONFIG);
             if (Build.VERSION.SDK_INT >= 33) {
-                application.registerReceiver(configReceiver, configFilter, Context.RECEIVER_EXPORTED);
+                app.registerReceiver(configReceiver, configFilter, Context.RECEIVER_EXPORTED);
             } else {
-                ContextCompat.registerReceiver(
-                        application, configReceiver, configFilter, ContextCompat.RECEIVER_EXPORTED);
+                ContextCompat.registerReceiver(app, configReceiver, configFilter, ContextCompat.RECEIVER_EXPORTED);
             }
 
             BroadcastReceiver queryReceiver = new BroadcastReceiver() {
@@ -276,16 +308,15 @@ public class Entry implements IXposedHookLoadPackage {
                             .setPackage(APP_PACKAGE)
                             .putExtra(HideConfigStore.EXTRA_QUERY_TOKEN, queryToken)
                             .putExtras(HideConfigStore.toBundle(config));
-                    application.sendBroadcast(reply);
+                    app.sendBroadcast(reply);
                     Log.d("FuseHide", "reported applied hide config queryToken=" + queryToken);
                 }
             };
             IntentFilter queryFilter = new IntentFilter(HideConfigStore.ACTION_GET_APPLIED_HIDE_CONFIG);
             if (Build.VERSION.SDK_INT >= 33) {
-                application.registerReceiver(queryReceiver, queryFilter, Context.RECEIVER_EXPORTED);
+                app.registerReceiver(queryReceiver, queryFilter, Context.RECEIVER_EXPORTED);
             } else {
-                ContextCompat.registerReceiver(
-                        application, queryReceiver, queryFilter, ContextCompat.RECEIVER_EXPORTED);
+                ContextCompat.registerReceiver(app, queryReceiver, queryFilter, ContextCompat.RECEIVER_EXPORTED);
             }
 
             BroadcastReceiver systemStateReceiver = new BroadcastReceiver() {
@@ -306,10 +337,10 @@ public class Entry implements IXposedHookLoadPackage {
             systemFilter.addAction(Intent.ACTION_BOOT_COMPLETED);
             systemFilter.addAction(Intent.ACTION_USER_UNLOCKED);
             if (Build.VERSION.SDK_INT >= 33) {
-                application.registerReceiver(systemStateReceiver, systemFilter, Context.RECEIVER_NOT_EXPORTED);
+                app.registerReceiver(systemStateReceiver, systemFilter, Context.RECEIVER_NOT_EXPORTED);
             } else {
                 ContextCompat.registerReceiver(
-                        application, systemStateReceiver, systemFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+                        app, systemStateReceiver, systemFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
             }
 
             startConfigReload("initial");

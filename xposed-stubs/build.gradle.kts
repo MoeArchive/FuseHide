@@ -15,10 +15,18 @@
  */
 
 plugins {
-    `java-library`
+    alias(libs.plugins.android.library)
 }
 
-java {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
+android {
+    namespace = "io.github.libxposed.api"
+    compileSdk = 37
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    compileOnly("androidx.annotation:annotation:1.9.1")
 }
