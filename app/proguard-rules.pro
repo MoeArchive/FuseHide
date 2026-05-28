@@ -20,12 +20,17 @@
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
 
-# LSPosed/Xposed entry points are referenced from assets/xposed_init and runtime callbacks,
-# so R8 must not rename or remove them in release builds.
--keep class io.github.xiaotong6666.fusehide.Entry { *; }
--keepnames class io.github.xiaotong6666.fusehide.Entry
--keep class * implements de.robv.android.xposed.IXposedHookLoadPackage { *; }
+# libxposed API 101 entry points are referenced from META-INF/xposed/java_init.list
+# and META-INF/xposed/native_init.list, so R8 must not rename or remove them in release builds.
+-keep class io.github.xiaotong6666.fusehide.xposed.Entry { *; }
+-keepnames class io.github.xiaotong6666.fusehide.xposed.Entry
+-keep class * extends io.github.libxposed.api.XposedModule { *; }
+
+# native_init is resolved via dlsym – symbol name must not be mangled
+-keepclasseswithmembernames class * {
+    native <methods>;
+}
 
 # These are reached from the module entry and receiver registration path.
--keep class io.github.xiaotong6666.fusehide.StatusBroadcastReceiver { *; }
--keep class io.github.xiaotong6666.fusehide.MainThreadTask { *; }
+-keep class io.github.xiaotong6666.fusehide.status.StatusBroadcastReceiver { *; }
+-keep class io.github.xiaotong6666.fusehide.xposed.MainThreadTask { *; }
