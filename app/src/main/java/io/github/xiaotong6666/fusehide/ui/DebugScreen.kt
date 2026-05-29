@@ -18,8 +18,22 @@
 
 package io.github.xiaotong6666.fusehide.ui
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import io.github.xiaotong6666.fusehide.R
 
 @Composable
 fun DebugScreen(
@@ -28,8 +42,123 @@ fun DebugScreen(
     callbacks: DebugCallbacks,
     contentPadding: PaddingValues,
 ) {
-    when (LocalUiMode.current) {
-        UiMode.Miuix -> DebugScreenMiuix(hookStatus, state, callbacks, contentPadding)
-        UiMode.Material -> DebugScreenMaterial(hookStatus, state, callbacks, contentPadding)
+    val scrollState = rememberScrollState()
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(scrollState)
+            .padding(contentPadding)
+            .padding(horizontal = 16.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        SectionCard {
+            SectionTitle(stringResource(R.string.section_probe_target))
+            Spacer(Modifier.height(6.dp))
+            SectionDescription(stringResource(R.string.section_probe_target_desc))
+            Spacer(Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                StatusChip(
+                    modifier = Modifier.weight(1f),
+                    label = stringResource(R.string.label_hook),
+                    value = hookSummaryValue(isHooked = hookStatus.isHooked, hookCheckCompleted = hookStatus.hookCheckCompleted),
+                    supportingText = hookSummarySupportingText(
+                        isHooked = hookStatus.isHooked,
+                        hookCheckCompleted = hookStatus.hookCheckCompleted,
+                        hookedPackage = hookStatus.hookedPackage,
+                    ),
+                    metaText = hookSummaryMetaText(isHooked = hookStatus.isHooked, hookedPid = hookStatus.hookedPid),
+                    emphasized = hookStatus.isHooked,
+                    onClick = callbacks.onStatusClick,
+                )
+            }
+            Spacer(Modifier.height(10.dp))
+            InfoPanel(
+                title = stringResource(R.string.label_path),
+                text = state.pathText.ifBlank { "-" },
+                monospace = true,
+            )
+            Spacer(Modifier.height(10.dp))
+            InfoPanel(title = stringResource(R.string.label_device), text = hookStatus.infoText, monospace = true)
+        }
+
+        SectionCard {
+            SectionTitle(stringResource(R.string.section_paths))
+            Spacer(Modifier.height(12.dp))
+            AppTextField(
+                value = state.pathText,
+                onValueChange = callbacks.onPathChanged,
+                modifier = Modifier.fillMaxWidth(),
+                label = stringResource(R.string.label_primary_path),
+            )
+            Spacer(Modifier.height(4.dp))
+            SectionDescription(
+                text = stringResource(R.string.field_primary_path_help),
+                style = SectionDescriptionStyle.Supporting,
+            )
+            Spacer(Modifier.height(10.dp))
+            AppTextField(
+                value = state.pathText2,
+                onValueChange = callbacks.onPath2Changed,
+                modifier = Modifier.fillMaxWidth(),
+                label = stringResource(R.string.label_secondary_path),
+            )
+            Spacer(Modifier.height(4.dp))
+            SectionDescription(
+                text = stringResource(R.string.field_secondary_path_help),
+                style = SectionDescriptionStyle.Supporting,
+            )
+        }
+
+        SectionCard {
+            SectionTitle(stringResource(R.string.section_common_probes))
+            Spacer(Modifier.height(12.dp))
+            ActionGrid(
+                listOf(
+                    GridActionItem(stringResource(R.string.button_stat), callbacks.onStatClick, GridActionStyle.Filled),
+                    GridActionItem(stringResource(R.string.button_access), callbacks.onAccessClick, GridActionStyle.Filled),
+                    GridActionItem(stringResource(R.string.button_list), callbacks.onListClick, GridActionStyle.Filled),
+                    GridActionItem(stringResource(R.string.button_open), callbacks.onOpenClick, GridActionStyle.Filled),
+                ),
+            )
+            Spacer(Modifier.height(12.dp))
+            SectionTitle(stringResource(R.string.section_mutation_probes), SectionTitleStyle.Subsection)
+            Spacer(Modifier.height(10.dp))
+            ActionGrid(
+                listOf(
+                    GridActionItem(stringResource(R.string.button_get_con), callbacks.onGetConClick),
+                    GridActionItem(stringResource(R.string.button_create), callbacks.onCreateClick),
+                    GridActionItem(stringResource(R.string.button_mkdir), callbacks.onMkdirClick),
+                    GridActionItem(stringResource(R.string.button_rename_move), callbacks.onMoveClick),
+                    GridActionItem(stringResource(R.string.button_rmdir), callbacks.onRmdirClick, isError = true),
+                    GridActionItem(stringResource(R.string.button_unlink), callbacks.onUnlinkClick),
+                ),
+            )
+            Spacer(Modifier.height(12.dp))
+            SectionTitle(stringResource(R.string.section_utilities))
+            Spacer(Modifier.height(10.dp))
+            ActionGrid(
+                listOf(
+                    GridActionItem(stringResource(R.string.button_all_pkg), callbacks.onAllPkgClick, GridActionStyle.Tonal),
+                    GridActionItem(stringResource(R.string.button_insert_zwj), callbacks.onInsertZwjClick, GridActionStyle.Tonal),
+                    GridActionItem(stringResource(R.string.button_clear_output), callbacks.onClearClick, GridActionStyle.Tonal),
+                    GridActionItem(stringResource(R.string.button_reset_path), callbacks.onResetClick, GridActionStyle.Tonal),
+                    GridActionItem(stringResource(R.string.button_copy_output), callbacks.onCopyAllClick, GridActionStyle.Tonal),
+                    GridActionItem(stringResource(R.string.button_self_data), callbacks.onSelfDataClick, GridActionStyle.Tonal),
+                ),
+            )
+        }
+
+        SectionCard {
+            SectionTitle(stringResource(R.string.section_probe_output), SectionTitleStyle.EmphasizedMedium)
+            Spacer(Modifier.height(10.dp))
+            InfoPanel(
+                title = stringResource(R.string.label_runtime_output),
+                text = state.outputText.ifEmpty { stringResource(R.string.probe_output_empty) },
+                monospace = true,
+            )
+        }
     }
 }

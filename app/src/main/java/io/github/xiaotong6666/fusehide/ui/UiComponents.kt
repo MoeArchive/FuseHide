@@ -25,6 +25,81 @@ import androidx.compose.ui.res.stringResource
 import io.github.xiaotong6666.fusehide.R
 
 @Composable
+fun SectionTitle(
+    text: String,
+    style: SectionTitleStyle = SectionTitleStyle.Large,
+) {
+    when (LocalUiMode.current) {
+        UiMode.Miuix -> SectionTitleMiuix(text, style)
+        UiMode.Material -> SectionTitleMaterial(text, style)
+    }
+}
+
+@Composable
+fun SectionDescription(
+    text: String,
+    style: SectionDescriptionStyle = SectionDescriptionStyle.Body,
+) {
+    when (LocalUiMode.current) {
+        UiMode.Miuix -> SectionDescriptionMiuix(text, style)
+        UiMode.Material -> SectionDescriptionMaterial(text, style)
+    }
+}
+
+@Composable
+fun AppTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+    singleLine: Boolean = false,
+) {
+    when (LocalUiMode.current) {
+        UiMode.Miuix -> AppTextFieldMiuix(value, onValueChange, label, modifier, singleLine)
+        UiMode.Material -> AppTextFieldMaterial(value, onValueChange, label, modifier, singleLine)
+    }
+}
+
+@Composable
+fun ConfigTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+    minLines: Int = 1,
+    maxLines: Int = Int.MAX_VALUE,
+) {
+    when (LocalUiMode.current) {
+        UiMode.Miuix -> ConfigTextFieldMiuix(value, onValueChange, label, modifier, minLines, maxLines)
+        UiMode.Material -> ConfigTextFieldMaterial(value, onValueChange, label, modifier, minLines, maxLines)
+    }
+}
+
+@Composable
+fun ConfigToggleCard(
+    checked: Boolean,
+    title: String,
+    description: String,
+    onToggle: () -> Unit,
+) {
+    when (LocalUiMode.current) {
+        UiMode.Miuix -> ConfigToggleCardMiuix(checked, title, description, onToggle)
+        UiMode.Material -> ConfigToggleCardMaterial(checked, title, description, onToggle)
+    }
+}
+
+@Composable
+fun InlineTextButton(
+    label: String,
+    onClick: () -> Unit,
+) {
+    when (LocalUiMode.current) {
+        UiMode.Miuix -> InlineTextButtonMiuix(label, onClick)
+        UiMode.Material -> InlineTextButtonMaterial(label, onClick)
+    }
+}
+
+@Composable
 fun DualActionRow(
     primaryLabel: String,
     onPrimaryClick: () -> Unit,

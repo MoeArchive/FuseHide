@@ -35,6 +35,19 @@ enum class GridActionStyle {
     Outlined,
 }
 
+enum class SectionTitleStyle {
+    Large,
+    Medium,
+    EmphasizedMedium,
+    Small,
+    Subsection,
+}
+
+enum class SectionDescriptionStyle {
+    Body,
+    Supporting,
+}
+
 data class HookStatusUiState(
     val infoText: String,
     val statusText: String,

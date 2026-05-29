@@ -31,8 +31,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -42,9 +44,138 @@ import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.Checkbox
 import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextButton
+import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import java.util.Locale
+
+@Composable
+fun SectionTitleMiuix(
+    text: String,
+    style: SectionTitleStyle,
+) {
+    Text(
+        text = text,
+        style = when (style) {
+            SectionTitleStyle.Large -> MiuixTheme.textStyles.title3.copy(fontWeight = FontWeight.Medium)
+            SectionTitleStyle.Medium -> MiuixTheme.textStyles.title4
+            SectionTitleStyle.EmphasizedMedium -> MiuixTheme.textStyles.title4.copy(fontWeight = FontWeight.Medium)
+            SectionTitleStyle.Small -> MiuixTheme.textStyles.title4
+            SectionTitleStyle.Subsection -> MiuixTheme.textStyles.title4.copy(fontWeight = FontWeight.Medium)
+        },
+        color = MiuixTheme.colorScheme.onSurface,
+    )
+}
+
+@Composable
+fun SectionDescriptionMiuix(
+    text: String,
+    style: SectionDescriptionStyle,
+) {
+    Text(
+        text = text,
+        style = when (style) {
+            SectionDescriptionStyle.Body -> MiuixTheme.textStyles.body1
+            SectionDescriptionStyle.Supporting -> MiuixTheme.textStyles.footnote1
+        },
+        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+    )
+}
+
+@Composable
+fun AppTextFieldMiuix(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+    singleLine: Boolean = false,
+) {
+    TextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier,
+        label = label,
+        backgroundColor = MiuixTheme.colorScheme.surfaceContainerHighest,
+        labelColor = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+        borderColor = MiuixTheme.colorScheme.primary,
+        textStyle = MiuixTheme.textStyles.main.copy(color = MiuixTheme.colorScheme.onSurface),
+        singleLine = singleLine,
+    )
+}
+
+@Composable
+fun ConfigTextFieldMiuix(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+    minLines: Int = 1,
+    maxLines: Int = Int.MAX_VALUE,
+) {
+    TextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier,
+        label = label,
+        backgroundColor = MiuixTheme.colorScheme.surfaceContainerHighest,
+        labelColor = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+        borderColor = MiuixTheme.colorScheme.primary,
+        textStyle = MiuixTheme.textStyles.main.copy(color = MiuixTheme.colorScheme.onSurfaceSecondary),
+        minLines = minLines,
+        maxLines = maxLines,
+    )
+}
+
+@Composable
+fun ConfigToggleCardMiuix(
+    checked: Boolean,
+    title: String,
+    description: String,
+    onToggle: () -> Unit,
+) {
+    Card(
+        onClick = onToggle,
+        colors = CardDefaults.defaultColors(
+            color = MiuixTheme.colorScheme.surfaceContainerHighest,
+            contentColor = MiuixTheme.colorScheme.onSurfaceContainerHighest,
+        ),
+        insideMargin = PaddingValues(0.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            Checkbox(
+                state = if (checked) ToggleableState.On else ToggleableState.Off,
+                onClick = onToggle,
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(title, style = MiuixTheme.textStyles.headline2)
+                Text(
+                    text = description,
+                    style = MiuixTheme.textStyles.footnote1,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun InlineTextButtonMiuix(
+    label: String,
+    onClick: () -> Unit,
+) {
+    TextButton(
+        text = label,
+        onClick = onClick,
+    )
+}
 
 @Composable
 fun DualActionRowMiuix(

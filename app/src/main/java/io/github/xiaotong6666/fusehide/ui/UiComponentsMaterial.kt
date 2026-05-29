@@ -33,12 +33,17 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -46,6 +51,136 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import java.util.Locale
+
+@Composable
+fun SectionTitleMaterial(
+    text: String,
+    style: SectionTitleStyle,
+) {
+    Text(
+        text = text,
+        style = when (style) {
+            SectionTitleStyle.Large -> MaterialTheme.typography.titleLarge
+            SectionTitleStyle.Medium -> MaterialTheme.typography.titleMedium
+            SectionTitleStyle.EmphasizedMedium -> MaterialTheme.typography.titleMedium
+            SectionTitleStyle.Small -> MaterialTheme.typography.titleSmall
+            SectionTitleStyle.Subsection -> MaterialTheme.typography.titleLarge
+        },
+        color = MaterialTheme.colorScheme.onSurface,
+    )
+}
+
+@Composable
+fun SectionDescriptionMaterial(
+    text: String,
+    style: SectionDescriptionStyle,
+) {
+    Text(
+        text = text,
+        style = when (style) {
+            SectionDescriptionStyle.Body -> MaterialTheme.typography.bodyMedium
+            SectionDescriptionStyle.Supporting -> MaterialTheme.typography.bodyMedium
+        },
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+}
+
+@Composable
+fun AppTextFieldMaterial(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+    singleLine: Boolean = false,
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier,
+        label = { Text(label) },
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+            focusedLabelColor = MaterialTheme.colorScheme.primary,
+            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        ),
+        textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+        singleLine = singleLine,
+    )
+}
+
+@Composable
+fun ConfigTextFieldMaterial(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+    minLines: Int = 1,
+    maxLines: Int = Int.MAX_VALUE,
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier,
+        label = { Text(label) },
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+            focusedLabelColor = MaterialTheme.colorScheme.primary,
+            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        ),
+        textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+        minLines = minLines,
+        maxLines = maxLines,
+    )
+}
+
+@Composable
+fun ConfigToggleCardMaterial(
+    checked: Boolean,
+    title: String,
+    description: String,
+    onToggle: () -> Unit,
+) {
+    ElevatedCard(
+        onClick = onToggle,
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+        ),
+        shape = MaterialTheme.shapes.small,
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(14.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            Checkbox(
+                checked = checked,
+                onCheckedChange = { onToggle() },
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    title,
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun InlineTextButtonMaterial(
+    label: String,
+    onClick: () -> Unit,
+) {
+    TextButton(onClick = onClick) {
+        Text(label)
+    }
+}
 
 @Composable
 fun DualActionRowMaterial(
