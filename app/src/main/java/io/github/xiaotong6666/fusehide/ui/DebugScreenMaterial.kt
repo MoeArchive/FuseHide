@@ -155,10 +155,10 @@ fun DebugScreenMaterial(
             Spacer(Modifier.height(12.dp))
             ActionGrid(
                 listOf(
-                    GridActionItem(stringResource(R.string.button_stat), callbacks.onStatClick),
-                    GridActionItem(stringResource(R.string.button_access), callbacks.onAccessClick),
-                    GridActionItem(stringResource(R.string.button_list), callbacks.onListClick),
-                    GridActionItem(stringResource(R.string.button_open), callbacks.onOpenClick),
+                    GridActionItem(stringResource(R.string.button_stat), callbacks.onStatClick, GridActionStyle.Filled),
+                    GridActionItem(stringResource(R.string.button_access), callbacks.onAccessClick, GridActionStyle.Filled),
+                    GridActionItem(stringResource(R.string.button_list), callbacks.onListClick, GridActionStyle.Filled),
+                    GridActionItem(stringResource(R.string.button_open), callbacks.onOpenClick, GridActionStyle.Filled),
                 ),
             )
             Spacer(Modifier.height(12.dp))
@@ -187,12 +187,12 @@ fun DebugScreenMaterial(
             Spacer(Modifier.height(10.dp))
             ActionGrid(
                 listOf(
-                    GridActionItem(stringResource(R.string.button_all_pkg), callbacks.onAllPkgClick),
-                    GridActionItem(stringResource(R.string.button_insert_zwj), callbacks.onInsertZwjClick),
-                    GridActionItem(stringResource(R.string.button_clear_output), callbacks.onClearClick),
-                    GridActionItem(stringResource(R.string.button_reset_path), callbacks.onResetClick),
-                    GridActionItem(stringResource(R.string.button_copy_output), callbacks.onCopyAllClick),
-                    GridActionItem(stringResource(R.string.button_self_data), callbacks.onSelfDataClick),
+                    GridActionItem(stringResource(R.string.button_all_pkg), callbacks.onAllPkgClick, GridActionStyle.Tonal),
+                    GridActionItem(stringResource(R.string.button_insert_zwj), callbacks.onInsertZwjClick, GridActionStyle.Tonal),
+                    GridActionItem(stringResource(R.string.button_clear_output), callbacks.onClearClick, GridActionStyle.Tonal),
+                    GridActionItem(stringResource(R.string.button_reset_path), callbacks.onResetClick, GridActionStyle.Tonal),
+                    GridActionItem(stringResource(R.string.button_copy_output), callbacks.onCopyAllClick, GridActionStyle.Tonal),
+                    GridActionItem(stringResource(R.string.button_self_data), callbacks.onSelfDataClick, GridActionStyle.Tonal),
                 ),
             )
         }

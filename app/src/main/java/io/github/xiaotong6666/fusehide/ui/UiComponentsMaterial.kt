@@ -34,6 +34,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -318,36 +319,61 @@ fun InfoPanelMaterial(
 
 @Composable
 fun ActionGridMaterial(actions: List<GridActionItem>) {
-    actions.chunked(2).forEach { rowActions ->
+    val rows = actions.chunked(2)
+    rows.forEachIndexed { rowIndex, rowActions ->
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             rowActions.forEach { item ->
-                if (item.isError) {
-                    OutlinedButton(
+                val modifier = Modifier.weight(1f)
+                val content: @Composable () -> Unit = {
+                    Text(
+                        item.label,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                }
+                when {
+                    item.isError -> OutlinedButton(
                         onClick = item.action,
-                        modifier = Modifier.weight(1f).height(48.dp),
+                        modifier = modifier,
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
                         shape = MaterialTheme.shapes.small,
-                    ) {
-                        Text(item.label, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, style = MaterialTheme.typography.titleMedium)
-                    }
-                } else {
-                    OutlinedButton(
+                        content = { content() },
+                    )
+
+                    item.style == GridActionStyle.Filled -> Button(
                         onClick = item.action,
-                        modifier = Modifier.weight(1f).height(48.dp),
+                        modifier = modifier,
                         shape = MaterialTheme.shapes.small,
-                    ) {
-                        Text(item.label, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, style = MaterialTheme.typography.titleMedium)
-                    }
+                        content = { content() },
+                    )
+
+                    item.style == GridActionStyle.Tonal -> FilledTonalButton(
+                        onClick = item.action,
+                        modifier = modifier,
+                        shape = MaterialTheme.shapes.small,
+                        content = { content() },
+                    )
+
+                    else -> OutlinedButton(
+                        onClick = item.action,
+                        modifier = modifier,
+                        shape = MaterialTheme.shapes.small,
+                        content = { content() },
+                    )
                 }
             }
             if (rowActions.size == 1) {
                 Spacer(modifier = Modifier.weight(1f))
             }
         }
-        Spacer(Modifier.height(8.dp))
+        if (rowIndex < rows.lastIndex) {
+            Spacer(Modifier.height(8.dp))
+        }
     }
 }
 

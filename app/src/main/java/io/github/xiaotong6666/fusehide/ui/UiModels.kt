@@ -25,8 +25,15 @@ data class HideConfigDiff(
 data class GridActionItem(
     val label: String,
     val action: () -> Unit,
+    val style: GridActionStyle = GridActionStyle.Outlined,
     val isError: Boolean = false,
 )
+
+enum class GridActionStyle {
+    Filled,
+    Tonal,
+    Outlined,
+}
 
 data class HookStatusUiState(
     val infoText: String,
