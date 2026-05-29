@@ -7,7 +7,7 @@
     <string name="section_runtime_policy">執行階段設定</string>
     <string name="section_runtime_policy_desc">編輯應用程式儲存的隱藏設定，並將其推送到已 Hook 的 MediaProvider 程序。</string>
     <string name="section_editable_draft">編輯設定</string>
-    <string name="section_editable_draft_desc">這些欄位是本機尚未儲存的設定。「儲存」會將其存到本機；「套用」會將其推送到 MediaProvider。</string>
+    <string name="section_editable_draft_desc">這些欄位是可編輯設定。點擊「套用」會儲存到本機並同步到 MediaProvider。</string>
     <string name="section_apply_feedback">套用結果</string>
     <string name="section_detailed_diff">詳細差異</string>
     <string name="section_snapshot">MediaProvider 快照</string>
@@ -41,7 +41,6 @@
     <string name="status_tap_recheck">點一下重新檢查</string>
     <string name="status_pid">pid=%1$d</string>
     <string name="button_apply">套用</string>
-    <string name="button_save">儲存</string>
     <string name="button_refresh_applied">重新整理已套用設定</string>
     <string name="button_restore_defaults">恢復預設值</string>
     <string name="button_show_detailed_diff">顯示詳細差異</string>
@@ -78,7 +77,6 @@
     <string name="status_hooked">模組狀態：已 Hook %1$s pid=%2$d</string>
     <string name="status_not_hooked">模組狀態：未 Hook（點一下重新檢查）</string>
     <string name="config_loaded_saved">已將儲存的隱藏設定載入編輯器。</string>
-    <string name="config_saved_local">已在本機儲存隱藏設定。</string>
     <string name="config_waiting_ack">已儲存隱藏設定並送出重新載入廣播；正在等待 MediaProvider 確認。</string>
     <string name="config_applied_ok">已在 MediaProvider 中套用隱藏設定。</string>
     <string name="config_applied_fail">重新載入隱藏設定失敗：%1$s</string>

@@ -46,17 +46,18 @@ class HideConfigRequestReceiver : BroadcastReceiver() {
             Log.e("FuseHide", "hide config request missing reply metadata")
             return
         }
+        val config = HideConfigStore.loadSavedConfigOrNull(context)
+        if (config == null) {
+            Log.e("FuseHide", "hide config request ignored because no saved app config exists")
+            return
+        }
 
         val response = Intent(replyAction)
             .setPackage(replyPackage)
             .addFlags(Intent.FLAG_RECEIVER_FOREGROUND)
             .putExtra(HideConfigStore.EXTRA_QUERY_TOKEN, queryToken)
-            .putExtras(HideConfigStore.toBundle(HideConfigStore.load(context)))
-            .putExtra(
-                HideConfigStore.EXTRA_RELOAD_TOKEN,
-                context.getSharedPreferences("hide_config", Context.MODE_PRIVATE)
-                    .getString("reload_token", null),
-            )
+            .putExtras(HideConfigStore.toBundle(config))
+            .putExtra(HideConfigStore.EXTRA_RELOAD_TOKEN, HideConfigStore.savedReloadToken(context))
         context.sendBroadcast(response)
         Log.d("FuseHide", "served hide config request callerUid=${Binder.getCallingUid()} replyPackage=$replyPackage queryToken=$queryToken")
     }

@@ -7,7 +7,7 @@
     <string name="section_runtime_policy">実行時設定</string>
     <string name="section_runtime_policy_desc">アプリに保存されている隠蔽設定を編集し、Hook済みの MediaProvider プロセスに反映します。</string>
     <string name="section_editable_draft">編集設定</string>
-    <string name="section_editable_draft_desc">ここに表示される項目は、ローカルにある未保存の設定です。「保存」はローカルに保存し、「適用」は MediaProvider に反映します。</string>
+    <string name="section_editable_draft_desc">ここに表示される項目は編集可能な設定です。「適用」を押すとローカルに保存し、MediaProvider に同期します。</string>
     <string name="section_apply_feedback">適用結果</string>
     <string name="section_detailed_diff">詳細差分</string>
     <string name="section_snapshot">MediaProvider スナップショット</string>
@@ -41,7 +41,6 @@
     <string name="status_tap_recheck">タップして再確認</string>
     <string name="status_pid">pid=%1$d</string>
     <string name="button_apply">適用</string>
-    <string name="button_save">保存</string>
     <string name="button_refresh_applied">適用済み設定を更新</string>
     <string name="button_restore_defaults">デフォルトに戻す</string>
     <string name="button_show_detailed_diff">詳細差分を表示</string>
@@ -78,7 +77,6 @@
     <string name="status_hooked">モジュール状態：Hook済み %1$s pid=%2$d</string>
     <string name="status_not_hooked">モジュール状態：未Hook（タップして再確認）</string>
     <string name="config_loaded_saved">保存済みの隠蔽設定をエディタに読み込みました。</string>
-    <string name="config_saved_local">隠蔽設定をローカルに保存しました。</string>
     <string name="config_waiting_ack">隠蔽設定を保存し、再読み込みブロードキャストを送信しました。MediaProvider からの確認を待機中です。</string>
     <string name="config_applied_ok">隠蔽設定を MediaProvider に適用しました。</string>
     <string name="config_applied_fail">隠蔽設定の再読み込みに失敗しました：%1$s</string>

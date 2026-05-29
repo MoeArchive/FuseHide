@@ -7,7 +7,7 @@
     <string name="section_runtime_policy">런타임 설정</string>
     <string name="section_runtime_policy_desc">앱에 저장된 숨김 설정을 수정한 뒤 후킹된 MediaProvider 프로세스에 반영합니다.</string>
     <string name="section_editable_draft">설정 편집</string>
-    <string name="section_editable_draft_desc">여기에 표시되는 항목은 로컬에 아직 저장되지 않은 설정입니다. ‘저장’은 로컬에 저장하고, ‘적용’은 MediaProvider에 반영합니다.</string>
+    <string name="section_editable_draft_desc">여기에 표시되는 항목은 편집 가능한 설정입니다. ‘적용’을 누르면 로컬에 저장하고 MediaProvider와 동기화합니다.</string>
     <string name="section_apply_feedback">적용 결과</string>
     <string name="section_detailed_diff">상세 차이</string>
     <string name="section_snapshot">MediaProvider 스냅샷</string>
@@ -41,7 +41,6 @@
     <string name="status_tap_recheck">탭하여 다시 확인</string>
     <string name="status_pid">pid=%1$d</string>
     <string name="button_apply">적용</string>
-    <string name="button_save">저장</string>
     <string name="button_refresh_applied">적용된 설정 새로고침</string>
     <string name="button_restore_defaults">기본값 복원</string>
     <string name="button_show_detailed_diff">상세 차이 보기</string>
@@ -78,7 +77,6 @@
     <string name="status_hooked">모듈 상태: 후킹됨 %1$s pid=%2$d</string>
     <string name="status_not_hooked">모듈 상태: 후킹 안 됨 (탭하여 다시 확인)</string>
     <string name="config_loaded_saved">저장된 숨김 설정을 편집기에 불러왔습니다.</string>
-    <string name="config_saved_local">숨김 설정을 로컬에 저장했습니다.</string>
     <string name="config_waiting_ack">숨김 설정을 저장하고 다시 불러오기 브로드캐스트를 보냈습니다. MediaProvider의 확인을 기다리는 중입니다.</string>
     <string name="config_applied_ok">숨김 설정이 MediaProvider에 적용되었습니다.</string>
     <string name="config_applied_fail">숨김 설정을 다시 불러오지 못했습니다: %1$s</string>

@@ -38,14 +38,10 @@ class HideConfigProvider : ContentProvider() {
             if (!isTrustedCaller(appContext)) {
                 return null
             }
-            return HideConfigStore.toBundle(HideConfigStore.load(appContext))
-                .apply {
-                    putString(
-                        "reload_token",
-                        appContext.getSharedPreferences("hide_config", android.content.Context.MODE_PRIVATE)
-                            .getString("reload_token", null),
-                    )
-                }
+            val config = HideConfigStore.loadSavedConfigOrNull(appContext) ?: return null
+            return HideConfigStore.toBundle(config).apply {
+                putString(HideConfigStore.EXTRA_RELOAD_TOKEN, HideConfigStore.savedReloadToken(appContext))
+            }
         }
         return super.call(method, arg, extras)
     }

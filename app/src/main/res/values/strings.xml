@@ -7,7 +7,7 @@
     <string name="section_runtime_policy">Runtime Config</string>
     <string name="section_runtime_policy_desc">Edit the hide config saved by the app and push it into the hooked MediaProvider process.</string>
     <string name="section_editable_draft">Editable Config</string>
-    <string name="section_editable_draft_desc">These fields are your local unsaved config. Save stores them locally; Apply pushes them to MediaProvider.</string>
+    <string name="section_editable_draft_desc">These fields are your editable config. Apply persists them locally and syncs MediaProvider.</string>
     <string name="section_apply_feedback">Apply Result</string>
     <string name="section_detailed_diff">Detailed Diff</string>
     <string name="section_snapshot">MediaProvider Snapshot</string>
@@ -41,7 +41,6 @@
     <string name="status_tap_recheck">Tap to recheck</string>
     <string name="status_pid">pid=%1$d</string>
     <string name="button_apply">Apply</string>
-    <string name="button_save">Save</string>
     <string name="button_refresh_applied">Refresh Applied Config</string>
     <string name="button_restore_defaults">Restore Defaults</string>
     <string name="button_show_detailed_diff">Show Detailed Diff</string>
@@ -78,7 +77,9 @@
     <string name="status_hooked">Module status: hooked %1$s pid=%2$d</string>
     <string name="status_not_hooked">Module status: not hooked (tap to recheck)</string>
     <string name="config_loaded_saved">Loaded the saved hide config into the editor.</string>
-    <string name="config_saved_local">Saved the hide config locally.</string>
+    <string name="config_missing_local">No saved local config was found. Defaults are shown only as a placeholder; they will not be saved unless you restore defaults explicitly.</string>
+    <string name="config_recovered_applied">Recovered the editor and local storage from the currently applied MediaProvider config.</string>
+    <string name="config_refuse_default_overwrite">Refusing to save placeholder defaults because no local config exists. Use Refresh Applied Config to recover, or tap Restore Defaults before saving if you really want defaults.</string>
     <string name="config_waiting_ack">Saved the hide config and sent a reload broadcast; waiting for MediaProvider ack.</string>
     <string name="config_applied_ok">The hide config was applied in MediaProvider.</string>
     <string name="config_applied_fail">Failed to reload the hide config: %1$s</string>

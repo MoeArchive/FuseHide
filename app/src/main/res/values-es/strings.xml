@@ -7,7 +7,7 @@
     <string name="section_runtime_policy">Configuración en tiempo de ejecución</string>
     <string name="section_runtime_policy_desc">Edita la configuración de ocultación guardada por la app y envíala al proceso MediaProvider enganchado.</string>
     <string name="section_editable_draft">Editar configuración</string>
-    <string name="section_editable_draft_desc">Estos campos contienen tu configuración local sin guardar. «Guardar» la almacena localmente; «Aplicar» la envía a MediaProvider.</string>
+    <string name="section_editable_draft_desc">Estos campos contienen tu configuración editable. «Aplicar» la guarda localmente y la sincroniza con MediaProvider.</string>
     <string name="section_apply_feedback">Resultado de la aplicación</string>
     <string name="section_detailed_diff">Diferencias detalladas</string>
     <string name="section_snapshot">Instantánea de MediaProvider</string>
@@ -41,7 +41,6 @@
     <string name="status_tap_recheck">Toca para volver a comprobar</string>
     <string name="status_pid">pid=%1$d</string>
     <string name="button_apply">Aplicar</string>
-    <string name="button_save">Guardar</string>
     <string name="button_refresh_applied">Actualizar configuración aplicada</string>
     <string name="button_restore_defaults">Restaurar valores predeterminados</string>
     <string name="button_show_detailed_diff">Mostrar diferencias detalladas</string>
@@ -78,7 +77,6 @@
     <string name="status_hooked">Estado del módulo: enganchado %1$s pid=%2$d</string>
     <string name="status_not_hooked">Estado del módulo: no enganchado (toca para volver a comprobar)</string>
     <string name="config_loaded_saved">Se cargó en el editor la configuración de ocultación guardada.</string>
-    <string name="config_saved_local">La configuración de ocultación se guardó localmente.</string>
     <string name="config_waiting_ack">Se guardó la configuración de ocultación y se envió el broadcast de recarga; esperando confirmación de MediaProvider.</string>
     <string name="config_applied_ok">La configuración de ocultación se aplicó en MediaProvider.</string>
     <string name="config_applied_fail">No se pudo recargar la configuración de ocultación: %1$s</string>

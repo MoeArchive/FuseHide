@@ -64,7 +64,6 @@ data class ConfigCallbacks(
     val onHideAllRootEntriesExemptionsChanged: (String) -> Unit,
     val onHiddenTargetsChanged: (String) -> Unit,
     val onHiddenPackagesChanged: (String) -> Unit,
-    val onSaveConfigClick: () -> Unit,
     val onApplyConfigClick: () -> Unit,
     val onResetConfigClick: () -> Unit,
     val onRefreshAppliedConfigClick: () -> Unit,

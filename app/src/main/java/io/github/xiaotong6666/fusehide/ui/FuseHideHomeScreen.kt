@@ -243,7 +243,6 @@ private fun PreviewFuseHideHomeScreen() {
                 onHideAllRootEntriesExemptionsChanged = {},
                 onHiddenTargetsChanged = {},
                 onHiddenPackagesChanged = {},
-                onSaveConfigClick = {},
                 onApplyConfigClick = {},
                 onResetConfigClick = {},
                 onRefreshAppliedConfigClick = {},

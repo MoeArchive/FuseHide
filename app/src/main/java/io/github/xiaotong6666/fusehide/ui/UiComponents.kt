@@ -39,6 +39,17 @@ fun DualActionRow(
 }
 
 @Composable
+fun PrimaryActionButton(
+    label: String,
+    onClick: () -> Unit,
+) {
+    when (LocalUiMode.current) {
+        UiMode.Miuix -> PrimaryActionButtonMiuix(label, onClick)
+        UiMode.Material -> PrimaryActionButtonMaterial(label, onClick)
+    }
+}
+
+@Composable
 fun ActionGrid(actions: List<GridActionItem>) {
     when (LocalUiMode.current) {
         UiMode.Miuix -> ActionGridMiuix(actions)

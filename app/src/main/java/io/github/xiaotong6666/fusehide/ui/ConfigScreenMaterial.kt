@@ -241,11 +241,9 @@ fun ConfigScreenMaterial(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(14.dp))
-            DualActionRow(
-                primaryLabel = stringResource(R.string.button_apply),
-                onPrimaryClick = callbacks.onApplyConfigClick,
-                secondaryLabel = stringResource(R.string.button_save),
-                onSecondaryClick = callbacks.onSaveConfigClick,
+            PrimaryActionButton(
+                label = stringResource(R.string.button_apply),
+                onClick = callbacks.onApplyConfigClick,
             )
             Spacer(Modifier.height(8.dp))
             DualActionRow(

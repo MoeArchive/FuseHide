@@ -76,6 +76,8 @@ class MainActivity : ComponentActivity() {
     private var appliedHideConfig: HideConfig? by mutableStateOf(null)
     private var appliedConfigSnapshotText by mutableStateOf("")
     private var highlightConfigResults by mutableStateOf(false)
+    private var localConfigMissing by mutableStateOf(false)
+    private var defaultSaveExplicitlyRequested: Boolean = false
     private var configResultsScrollToken by mutableStateOf(0)
     private var shouldAutoScrollConfigResults by mutableStateOf(false)
     private var enableHideAllRootEntries by mutableStateOf(HideConfigDefaults.value.enableHideAllRootEntries)
@@ -123,8 +125,16 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         uiMode = UiMode.fromPrefs(this)
         appendInfo()
-        applyConfigToEditor(HideConfigStore.load(this))
-        configStatusText = getString(R.string.config_loaded_saved) + "\n"
+        val savedConfig = HideConfigStore.loadSavedConfigOrNull(this)
+        if (savedConfig == null) {
+            localConfigMissing = true
+            applyConfigToEditor(HideConfigDefaults.value)
+            highlightConfigResults = true
+            configStatusText = getString(R.string.config_missing_local) + "\n"
+        } else {
+            applyConfigToEditor(savedConfig)
+            configStatusText = getString(R.string.config_loaded_saved) + "\n"
+        }
         appliedConfigSnapshotText = getString(R.string.config_snapshot_missing) + "\n"
 
         statusReceiver = StatusBroadcastReceiver(this, 1)
@@ -180,6 +190,10 @@ class MainActivity : ComponentActivity() {
                     getString(R.string.config_snapshot_missing) + "\n"
                 } else {
                     buildAppliedConfigSnapshot(config)
+                }
+                if (localConfigMissing && config != null && config != HideConfigDefaults.value) {
+                    applyConfigToEditor(config)
+                    saveAndReloadHideConfig(getString(R.string.config_recovered_applied) + "\n")
                 }
                 highlightConfigResults = config == null || buildDraftVsAppliedDiff(this@MainActivity, currentHideConfig(), config).hasDifferences
                 if (shouldAutoScrollConfigResults) {
@@ -410,7 +424,6 @@ class MainActivity : ComponentActivity() {
         onHideAllRootEntriesExemptionsChanged = { hideAllRootEntriesExemptionsText = it },
         onHiddenTargetsChanged = { hiddenTargetsText = it },
         onHiddenPackagesChanged = { hiddenPackagesText = it },
-        onSaveConfigClick = ::saveHideConfig,
         onApplyConfigClick = ::applyHideConfig,
         onResetConfigClick = ::resetHideConfigToDefaults,
         onRefreshAppliedConfigClick = ::refreshAppliedConfig,
@@ -438,17 +451,21 @@ class MainActivity : ComponentActivity() {
         onSelfDataClick = { appendOutput("external files dir: ${getExternalFilesDir("")}\n") },
     )
 
-    private fun saveHideConfig() {
-        HideConfigStore.save(this, currentHideConfig())
-        configStatusText = getString(R.string.config_saved_local) + "\n"
+    private fun applyHideConfig() {
+        saveAndReloadHideConfig(getString(R.string.config_waiting_ack) + "\n")
     }
 
-    private fun applyHideConfig() {
+    private fun saveAndReloadHideConfig(statusMessage: String) {
+        if (refuseMissingLocalDefaultSave()) {
+            return
+        }
         val reloadToken = UUID.randomUUID().toString()
         pendingReloadToken = reloadToken
         HideConfigStore.save(this, currentHideConfig(), reloadToken)
+        localConfigMissing = false
+        defaultSaveExplicitlyRequested = false
         HideConfigStore.sendReloadBroadcast(this, reloadToken)
-        configStatusText = getString(R.string.config_waiting_ack) + "\n"
+        configStatusText = statusMessage
         startStatusCheck()
     }
 
@@ -462,7 +479,18 @@ class MainActivity : ComponentActivity() {
 
     private fun resetHideConfigToDefaults() {
         applyConfigToEditor(HideConfigDefaults.value)
+        defaultSaveExplicitlyRequested = true
         configStatusText = getString(R.string.config_restored_defaults) + "\n"
+    }
+
+    private fun refuseMissingLocalDefaultSave(): Boolean {
+        if (!localConfigMissing || currentHideConfig() != HideConfigDefaults.value || defaultSaveExplicitlyRequested) {
+            return false
+        }
+        configStatusText = getString(R.string.config_refuse_default_overwrite) + "\n"
+        highlightConfigResults = true
+        configResultsScrollToken += 1
+        return true
     }
 
     private fun appendOutput(text: String) {

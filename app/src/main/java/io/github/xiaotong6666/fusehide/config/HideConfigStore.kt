@@ -86,6 +86,23 @@ object HideConfigStore {
         fun onResult(applied: Boolean)
     }
 
+    @JvmStatic
+    fun hasSavedConfig(context: Context): Boolean = hasSavedConfig(
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE),
+    )
+
+    fun loadSavedConfigOrNull(context: Context): HideConfig? {
+        if (!hasSavedConfig(context)) {
+            return null
+        }
+        return load(context)
+    }
+
+    @JvmStatic
+    fun savedReloadToken(context: Context): String? = context
+        .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        .getString(KEY_RELOAD_TOKEN, null)
+
     fun load(context: Context): HideConfig {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val defaults = HideConfigDefaults.value
@@ -387,8 +404,9 @@ object HideConfigStore {
                     saveInjectedProcessSnapshot(context, it, reloadTokenFromBundle(bundle))
                 }
             }
-            Log.d("FuseHide", "initial config fallback applied=$applied")
-            callback?.onResult(applied)
+            val result = applied || snapshotApplied
+            Log.d("FuseHide", "initial config fallback applied=$applied snapshotApplied=$snapshotApplied")
+            callback?.onResult(result)
         }
         return snapshotApplied
     }
@@ -486,4 +504,13 @@ object HideConfigStore {
             prefs.getString(KEY_PACKAGE_RULE_RELATIVE_PATHS, null),
         )
     }
+
+    private fun hasSavedConfig(prefs: android.content.SharedPreferences): Boolean = prefs.contains(KEY_ENABLE_HIDE_ALL_ROOT_ENTRIES) ||
+        prefs.contains(KEY_HIDE_ALL_ROOT_ENTRIES_EXEMPTIONS) ||
+        prefs.contains(KEY_HIDDEN_ROOT_ENTRY_NAMES) ||
+        prefs.contains(KEY_HIDDEN_RELATIVE_PATHS) ||
+        prefs.contains(KEY_HIDDEN_PACKAGES) ||
+        prefs.contains(KEY_PACKAGE_RULE_PACKAGES) ||
+        prefs.contains(KEY_PACKAGE_RULE_ROOT_ENTRY_NAMES) ||
+        prefs.contains(KEY_PACKAGE_RULE_RELATIVE_PATHS)
 }

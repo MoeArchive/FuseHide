@@ -7,7 +7,7 @@
     <string name="section_runtime_policy">运行时配置</string>
     <string name="section_runtime_policy_desc">编辑应用保存的隐藏配置，并将其推送到被 Hook 的 MediaProvider 进程中。</string>
     <string name="section_editable_draft">编辑配置</string>
-    <string name="section_editable_draft_desc">这些字段是您的本地未保存的配置。“保存”将其存入本地；“应用”将其推送到 MediaProvider。</string>
+    <string name="section_editable_draft_desc">这些字段是可编辑配置。点击“应用”会保存到本地并同步到 MediaProvider。</string>
     <string name="section_apply_feedback">应用反馈</string>
     <string name="section_detailed_diff">详细差异</string>
     <string name="section_snapshot">MediaProvider 快照</string>
@@ -41,7 +41,6 @@
     <string name="status_tap_recheck">点击重新检查</string>
     <string name="status_pid">pid=%1$d</string>
     <string name="button_apply">应用</string>
-    <string name="button_save">保存</string>
     <string name="button_refresh_applied">刷新已应用配置</string>
     <string name="button_restore_defaults">恢复默认值</string>
     <string name="button_show_detailed_diff">显示详细差异</string>
@@ -78,7 +77,6 @@
     <string name="status_hooked">模块状态：已 Hook %1$s pid=%2$d</string>
     <string name="status_not_hooked">模块状态：未 Hook（点击重新检查）</string>
     <string name="config_loaded_saved">已将保存的隐藏配置加载到编辑器中。</string>
-    <string name="config_saved_local">已本地保存隐藏配置。</string>
     <string name="config_waiting_ack">已保存隐藏配置并发送重新加载广播；等待 MediaProvider 确认。</string>
     <string name="config_applied_ok">隐藏配置已在 MediaProvider 中应用。</string>
     <string name="config_applied_fail">隐藏配置重新加载失败：%1$s</string>

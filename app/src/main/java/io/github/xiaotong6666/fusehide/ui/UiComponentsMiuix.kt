@@ -86,6 +86,26 @@ fun DualActionRowMiuix(
 }
 
 @Composable
+fun PrimaryActionButtonMiuix(
+    label: String,
+    onClick: () -> Unit,
+) {
+    Button(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth().height(56.dp),
+        colors = ButtonDefaults.buttonColorsPrimary(),
+    ) {
+        Text(
+            text = label,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+            style = MiuixTheme.textStyles.button.copy(fontWeight = FontWeight.Medium),
+        )
+    }
+}
+
+@Composable
 fun ActionGridMiuix(actions: List<GridActionItem>) {
     actions.chunked(2).forEach { rowActions ->
         Row(
