@@ -25,7 +25,7 @@ plugins {
     alias(libs.plugins.spotless)
 }
 
-val ndkVersion = "28.2.13676358"
+val ndkVersion = "30.0.14904198"
 
 spotless {
     lineEndings = com.diffplug.spotless.LineEnding.UNIX
@@ -90,7 +90,7 @@ spotless {
 
         val clangFile = file(clangPath)
         if (clangFile.exists()) {
-            clangFormat("19.0.1").style("file").pathToExe(clangPath)
+            clangFormat("21.0.0").style("file").pathToExe(clangPath)
         } else {
             println("Spotless Warning: Clang-format not found at $clangPath")
             clangFormat().style("file")
