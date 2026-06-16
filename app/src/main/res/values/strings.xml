@@ -1,6 +1,6 @@
 <resources>
     <string name="app_name">FuseHide</string>
-    <string name="app_description">MediaProvider FUSE debugging tool.</string>
+    <string name="app_description">An Xposed module for Android 12+ that hides regular storage paths in MediaProvider based on runtime configuration, and provides debugging and fixing capabilities for Android/data Unicode scenarios.</string>
     <string name="home_subtitle_runtime">Review the current runtime hook state and the config active inside MediaProvider.</string>
     <string name="home_subtitle_policy">Adjust the runtime hide config and verify what MediaProvider is actually using.</string>
     <string name="home_subtitle_probe">Run direct path checks against the hooked MediaProvider process.</string>

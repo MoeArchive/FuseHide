@@ -1,6 +1,6 @@
 <resources>
     <string name="app_name">FuseHide</string>
-    <string name="app_description">Herramienta de depuración MediaProvider FUSE.</string>
+    <string name="app_description">Un módulo Xposed para Android 12+ que permite ocultar rutas de almacenamiento normales en MediaProvider según la configuración en tiempo de ejecución y proporciona funciones de depuración y corrección para escenarios Unicode relacionados con Android/data.</string>
     <string name="home_subtitle_policy">Ajusta la configuración de ocultación en tiempo de ejecución y comprueba qué configuración está usando realmente MediaProvider.</string>
     <string name="home_subtitle_probe">Ejecuta comprobaciones directas de rutas en el proceso MediaProvider enganchado.</string>
     <string name="section_editable_draft">Editar configuración</string>

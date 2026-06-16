@@ -1,6 +1,6 @@
 <resources>
     <string name="app_name">FuseHide</string>
-    <string name="app_description">MediaProvider FUSE 调试工具。</string>
+    <string name="app_description">面向 Android 12+ 的 Xposed 模块，用于在 MediaProvider 中按运行时配置隐藏普通存储路径，并提供 Android/data 相关 Unicode 场景的调试与修复能力。</string>
     <string name="home_subtitle_runtime">查看当前 Hook 运行状态以及 MediaProvider 内实际生效的配置。</string>
     <string name="home_subtitle_policy">调整运行时隐藏配置，并验证 MediaProvider 的实际使用情况。</string>
     <string name="home_subtitle_probe">针对被 Hook 的 MediaProvider 进程运行直接路径检测。</string>
