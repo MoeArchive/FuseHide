@@ -71,35 +71,35 @@ private fun SettingsPageContent(
                 text = stringResource(R.string.section_ui_family_desc),
                 style = SectionDescriptionStyle.Supporting,
             )
-            Spacer(Modifier.height(12.dp))
-            ConfigToggleCard(
-                checked = state.uiMode == UiMode.Miuix,
-                title = stringResource(R.string.field_use_miuix_title),
-                description = if (state.uiMode == UiMode.Miuix) {
-                    stringResource(R.string.field_use_miuix_desc_enabled)
-                } else {
-                    stringResource(R.string.field_use_miuix_desc_disabled)
-                },
-                onToggle = callbacks.onToggleUiMode,
-            )
         }
+
+        ConfigToggleCard(
+            checked = state.uiMode == UiMode.Miuix,
+            title = stringResource(R.string.field_use_miuix_title),
+            description = if (state.uiMode == UiMode.Miuix) {
+                stringResource(R.string.field_use_miuix_desc_enabled)
+            } else {
+                stringResource(R.string.field_use_miuix_desc_disabled)
+            },
+            onToggle = callbacks.onToggleUiMode,
+        )
 
         SectionCard {
             SectionTitle(stringResource(R.string.section_about), SectionTitleStyle.Medium)
-            Spacer(Modifier.height(10.dp))
-            InfoPanel(
-                title = stringResource(R.string.label_current_ui_family),
-                text = if (state.uiMode == UiMode.Miuix) {
-                    stringResource(R.string.value_ui_family_miuix)
-                } else {
-                    stringResource(R.string.value_ui_family_material)
-                },
-            )
-            Spacer(Modifier.height(10.dp))
-            InfoPanel(
-                title = stringResource(R.string.app_name),
-                text = stringResource(R.string.app_description),
-            )
         }
+
+        InfoPanel(
+            title = stringResource(R.string.label_current_ui_family),
+            text = if (state.uiMode == UiMode.Miuix) {
+                stringResource(R.string.value_ui_family_miuix)
+            } else {
+                stringResource(R.string.value_ui_family_material)
+            },
+        )
+
+        InfoPanel(
+            title = stringResource(R.string.app_name),
+            text = stringResource(R.string.app_description),
+        )
     }
 }

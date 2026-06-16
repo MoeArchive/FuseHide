@@ -87,55 +87,56 @@ private fun HomePageContent(
                 text = stringResource(R.string.section_runtime_overview_desc),
                 style = SectionDescriptionStyle.Supporting,
             )
-            Spacer(Modifier.height(12.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                StatusChip(
-                    modifier = Modifier.weight(1f).heightIn(min = 130.dp),
-                    label = stringResource(R.string.label_hook),
-                    value = hookSummaryValue(isHooked = hookStatus.isHooked, hookCheckCompleted = hookStatus.hookCheckCompleted),
-                    supportingText = hookSummarySupportingText(
-                        isHooked = hookStatus.isHooked,
-                        hookCheckCompleted = hookStatus.hookCheckCompleted,
-                        hookedPackage = hookStatus.hookedPackage,
-                    ),
-                    metaText = hookSummaryMetaText(isHooked = hookStatus.isHooked, hookedPid = hookStatus.hookedPid),
-                    emphasized = hookStatus.isHooked,
-                    onClick = callbacks.onStatusClick,
-                )
-                StatusChip(
-                    modifier = Modifier.weight(1f).heightIn(min = 130.dp),
-                    label = stringResource(R.string.label_sync),
-                    value = if (resultsNeedAttention) stringResource(R.string.state_sync_needs_review) else stringResource(R.string.state_sync_ok),
-                    supportingText = configState.draftVsAppliedDiff.summary,
-                    emphasized = !resultsNeedAttention,
-                )
-            }
-            Spacer(Modifier.height(10.dp))
-            InfoPanel(
-                title = stringResource(R.string.label_runtime_summary),
-                text = configState.configStatusText.ifEmpty { configState.draftVsAppliedDiff.summary },
-                emphasized = resultsNeedAttention,
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            StatusChip(
+                modifier = Modifier.weight(1f).heightIn(min = 130.dp),
+                label = stringResource(R.string.label_hook),
+                value = hookSummaryValue(isHooked = hookStatus.isHooked, hookCheckCompleted = hookStatus.hookCheckCompleted),
+                supportingText = hookSummarySupportingText(
+                    isHooked = hookStatus.isHooked,
+                    hookCheckCompleted = hookStatus.hookCheckCompleted,
+                    hookedPackage = hookStatus.hookedPackage,
+                ),
+                metaText = hookSummaryMetaText(isHooked = hookStatus.isHooked, hookedPid = hookStatus.hookedPid),
+                emphasized = hookStatus.isHooked,
+                onClick = callbacks.onStatusClick,
             )
-            Spacer(Modifier.height(10.dp))
-            InfoPanel(
-                title = stringResource(R.string.label_current_native_config),
-                text = configState.appliedConfigSnapshotText,
-                monospace = true,
-                emphasized = resultsNeedAttention,
+            StatusChip(
+                modifier = Modifier.weight(1f).heightIn(min = 130.dp),
+                label = stringResource(R.string.label_sync),
+                value = if (resultsNeedAttention) stringResource(R.string.state_sync_needs_review) else stringResource(R.string.state_sync_ok),
+                supportingText = configState.draftVsAppliedDiff.summary,
+                emphasized = !resultsNeedAttention,
             )
         }
+
+        InfoPanel(
+            title = stringResource(R.string.label_runtime_summary),
+            text = configState.configStatusText.ifEmpty { configState.draftVsAppliedDiff.summary },
+            emphasized = resultsNeedAttention,
+        )
+
+        InfoPanel(
+            title = stringResource(R.string.label_current_native_config),
+            text = configState.appliedConfigSnapshotText,
+            monospace = true,
+            emphasized = resultsNeedAttention,
+        )
 
         SectionCard {
             SectionTitle(stringResource(R.string.section_device_status), SectionTitleStyle.Medium)
             Spacer(Modifier.height(10.dp))
-            InfoPanel(
-                title = stringResource(R.string.label_device),
-                text = hookStatus.infoText,
-                monospace = true,
-            )
         }
+
+        InfoPanel(
+            title = stringResource(R.string.label_device),
+            text = hookStatus.infoText,
+            monospace = true,
+        )
     }
 }

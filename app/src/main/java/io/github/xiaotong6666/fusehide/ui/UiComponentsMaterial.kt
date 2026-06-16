@@ -268,18 +268,12 @@ fun PrimaryActionButtonMaterial(
 
 @Composable
 fun SectionCardMaterial(content: @Composable ColumnScope.() -> Unit) {
-    ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.elevatedCardColors(),
-        shape = MaterialTheme.shapes.medium,
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            content = content,
-        )
-    }
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
+        content = content,
+    )
 }
 
 @Composable

@@ -133,12 +133,12 @@ private fun DebugPageContent(
 
         SectionCard {
             SectionTitle(stringResource(R.string.section_probe_output), SectionTitleStyle.EmphasizedMedium)
-            Spacer(Modifier.height(10.dp))
-            InfoPanel(
-                title = stringResource(R.string.label_runtime_output),
-                text = state.outputText.ifEmpty { stringResource(R.string.probe_output_empty) },
-                monospace = true,
-            )
         }
+
+        InfoPanel(
+            title = stringResource(R.string.label_runtime_output),
+            text = state.outputText.ifEmpty { stringResource(R.string.probe_output_empty) },
+            monospace = true,
+        )
     }
 }

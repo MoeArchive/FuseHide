@@ -283,19 +283,12 @@ fun ActionGridMiuix(actions: List<GridActionItem>) {
 
 @Composable
 fun SectionCardMiuix(content: @Composable ColumnScope.() -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.defaultColors(
-            color = MiuixTheme.colorScheme.surfaceContainerHigh.copy(0.45f),
-            contentColor = MiuixTheme.colorScheme.onSurfaceContainerHigh,
-        ),
-        insideMargin = PaddingValues(0.dp),
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            content = content,
-        )
-    }
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
+        content = content,
+    )
 }
 
 @Composable
