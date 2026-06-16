@@ -42,6 +42,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -58,6 +59,7 @@ import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import kotlin.math.abs
+import kotlin.math.roundToInt
 import top.yukonga.miuix.kmp.basic.NavigationBar as MiuixNavigationBar
 import top.yukonga.miuix.kmp.basic.NavigationBarItem as MiuixNavigationBarItem
 
@@ -108,10 +110,46 @@ fun MainPage(
     }
     val pagerState = rememberPagerState(initialPage = selectedTab, pageCount = { pageSpecs.size })
     var targetPage by remember { mutableIntStateOf(selectedTab.coerceIn(0, pageSpecs.lastIndex)) }
-    val currentPage = pageSpecs[targetPage.coerceIn(0, pageSpecs.lastIndex)]
+    var pendingPage by remember { mutableStateOf<Int?>(null) }
     val scope = rememberCoroutineScope()
     val settledPage = pagerState.settledPage
+    val scrollingPageIndex = (pagerState.currentPage + pagerState.currentPageOffsetFraction)
+        .roundToInt()
+        .coerceIn(0, pageSpecs.lastIndex)
+    val activePageIndex = when {
+        pagerState.isScrollInProgress -> scrollingPageIndex
+
+        else -> pendingPage?.coerceIn(0, pageSpecs.lastIndex)
+            ?: settledPage.coerceIn(0, pageSpecs.lastIndex)
+    }
+    val activePage = pageSpecs[activePageIndex]
     val miuixScrollBehavior = MiuixScrollBehavior()
+    val onPageSelected: (Int) -> Unit = { index ->
+        if (targetPage != index) {
+            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+            targetPage = index
+            pendingPage = index
+            scope.launch { pagerState.springScrollToPage(index) }
+        }
+    }
+
+    LaunchedEffect(settledPage) {
+        if (pendingPage == settledPage) {
+            pendingPage = null
+        }
+    }
+
+    LaunchedEffect(pendingPage, pagerState.currentPage, pagerState.currentPageOffsetFraction) {
+        if (pendingPage == null) return@LaunchedEffect
+        if (pagerState.currentPage != pendingPage || abs(pagerState.currentPageOffsetFraction) > 0f) {
+            pendingPage = null
+        }
+    }
+
+    LaunchedEffect(pagerState.isScrollInProgress) {
+        if (!pagerState.isScrollInProgress || pendingPage == null) return@LaunchedEffect
+        pendingPage = null
+    }
 
     LaunchedEffect(pagerState.currentPage) {
         if (!pagerState.isScrollInProgress) {
@@ -145,7 +183,7 @@ fun MainPage(
                         title = stringResource(R.string.app_name),
                         color = MiuixTheme.colorScheme.surface,
                         titleColor = MiuixTheme.colorScheme.onSurface,
-                        subtitle = currentPage.subtitle,
+                        subtitle = activePage.subtitle,
                         subtitleColor = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         scrollBehavior = miuixScrollBehavior,
                     )
@@ -154,14 +192,8 @@ fun MainPage(
                     MiuixNavigationBar {
                         pageSpecs.forEachIndexed { index, page ->
                             MiuixNavigationBarItem(
-                                selected = targetPage == index,
-                                onClick = {
-                                    if (targetPage != index) {
-                                        view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                                        targetPage = index
-                                        scope.launch { pagerState.springScrollToPage(index) }
-                                    }
-                                },
+                                selected = activePageIndex == index,
+                                onClick = { onPageSelected(index) },
                                 icon = page.icon,
                                 label = page.title,
                             )
@@ -179,10 +211,10 @@ fun MainPage(
                         .nestedScroll(miuixScrollBehavior.nestedScrollConnection)
 
                     when (page) {
-                        0 -> HomePage(hookStatus = hookStatus, configState = configState, callbacks = homeCallbacks, contentPadding = paddingValues, isCurrentPage = page == pagerState.currentPage, scrollModifier = scrollModifier, title = stringResource(R.string.app_name), subtitle = currentPage.subtitle)
-                        1 -> ConfigPage(hookStatus = hookStatus, state = configState, callbacks = configCallbacks, contentPadding = paddingValues, isCurrentPage = page == pagerState.currentPage, scrollModifier = scrollModifier, title = stringResource(R.string.app_name), subtitle = currentPage.subtitle)
-                        2 -> DebugPage(state = debugState, callbacks = debugCallbacks, contentPadding = paddingValues, isCurrentPage = page == pagerState.currentPage, scrollModifier = scrollModifier, title = stringResource(R.string.app_name), subtitle = currentPage.subtitle)
-                        else -> SettingsPage(state = settingsState, callbacks = settingsCallbacks, contentPadding = paddingValues, isCurrentPage = page == pagerState.currentPage, scrollModifier = scrollModifier, title = stringResource(R.string.app_name), subtitle = currentPage.subtitle)
+                        0 -> HomePage(hookStatus = hookStatus, configState = configState, callbacks = homeCallbacks, contentPadding = paddingValues, isCurrentPage = page == pagerState.currentPage, scrollModifier = scrollModifier, title = stringResource(R.string.app_name), subtitle = activePage.subtitle)
+                        1 -> ConfigPage(hookStatus = hookStatus, state = configState, callbacks = configCallbacks, contentPadding = paddingValues, isCurrentPage = page == pagerState.currentPage, scrollModifier = scrollModifier, title = stringResource(R.string.app_name), subtitle = activePage.subtitle)
+                        2 -> DebugPage(state = debugState, callbacks = debugCallbacks, contentPadding = paddingValues, isCurrentPage = page == pagerState.currentPage, scrollModifier = scrollModifier, title = stringResource(R.string.app_name), subtitle = activePage.subtitle)
+                        else -> SettingsPage(state = settingsState, callbacks = settingsCallbacks, contentPadding = paddingValues, isCurrentPage = page == pagerState.currentPage, scrollModifier = scrollModifier, title = stringResource(R.string.app_name), subtitle = activePage.subtitle)
                     }
                 }
             }
@@ -199,7 +231,7 @@ fun MainPage(
                                 Column {
                                     Text(text = stringResource(R.string.app_name), style = MaterialTheme.typography.headlineSmall)
                                     Text(
-                                        text = currentPage.subtitle,
+                                        text = activePage.subtitle,
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -217,14 +249,8 @@ fun MainPage(
                     NavigationBar {
                         pageSpecs.forEachIndexed { index, page ->
                             NavigationBarItem(
-                                selected = targetPage == index,
-                                onClick = {
-                                    if (targetPage != index) {
-                                        view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                                        targetPage = index
-                                        scope.launch { pagerState.springScrollToPage(index) }
-                                    }
-                                },
+                                selected = activePageIndex == index,
+                                onClick = { onPageSelected(index) },
                                 icon = { Icon(page.icon, contentDescription = page.title) },
                                 label = { Text(page.title) },
                             )
