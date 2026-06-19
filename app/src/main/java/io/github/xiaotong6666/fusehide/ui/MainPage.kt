@@ -18,11 +18,15 @@
 
 package io.github.xiaotong6666.fusehide.ui
 
-import android.view.HapticFeedbackConstants
+import androidx.compose.animation.core.AnimationVector1D
+import androidx.compose.animation.core.TargetBasedAnimation
+import androidx.compose.animation.core.VectorConverter
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.MutatePriority
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Home
@@ -40,22 +44,28 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import io.github.xiaotong6666.fusehide.R
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import kotlin.math.abs
-import kotlin.math.roundToInt
 import top.yukonga.miuix.kmp.basic.NavigationBar as MiuixNavigationBar
 import top.yukonga.miuix.kmp.basic.NavigationBarItem as MiuixNavigationBarItem
 
@@ -65,6 +75,62 @@ private data class MainDestinationSpec(
     val subtitle: String,
     val icon: ImageVector,
 )
+
+private class MainPagerState(
+    val pagerState: PagerState,
+    private val coroutineScope: CoroutineScope,
+) {
+    var selectedPage by mutableIntStateOf(pagerState.currentPage)
+        private set
+
+    var isNavigating by mutableStateOf(false)
+        private set
+
+    private var navJob: Job? = null
+
+    fun animateToPage(targetIndex: Int) {
+        if (targetIndex == selectedPage) return
+
+        navJob?.cancel()
+        selectedPage = targetIndex
+        isNavigating = true
+
+        navJob = coroutineScope.launch {
+            val myJob = coroutineContext.job
+            try {
+                pagerState.springAnimateToPage(targetIndex)
+            } finally {
+                if (navJob == myJob) {
+                    isNavigating = false
+                    if (pagerState.settledPage != targetIndex) {
+                        selectedPage = pagerState.settledPage
+                    }
+                }
+            }
+        }
+    }
+
+    fun syncPage() {
+        if (!isNavigating && selectedPage != pagerState.currentPage) {
+            selectedPage = pagerState.currentPage
+        }
+    }
+
+    suspend fun cancelNavigation() {
+        navJob?.cancelAndJoin()
+        navJob = null
+        isNavigating = false
+        selectedPage = pagerState.settledPage
+    }
+}
+
+@Composable
+private fun rememberMainPagerState(
+    pagerState: PagerState,
+    coroutineScope: CoroutineScope = rememberCoroutineScope(),
+): MainPagerState = remember(pagerState, coroutineScope) {
+    MainPagerState(pagerState, coroutineScope)
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -80,7 +146,6 @@ fun MainPage(
     settingsState: SettingsUiState,
     settingsCallbacks: SettingsCallbacks,
 ) {
-    val view = LocalView.current
     val pageSpecs = remember {
         listOf(
             MainDestinationSpec(MainDestination.Home, "", "", Icons.Outlined.Home),
@@ -105,22 +170,19 @@ fun MainPage(
         )
     }
     val pagerState = rememberPagerState(initialPage = selectedTab, pageCount = { pageSpecs.size })
-    val scope = rememberCoroutineScope()
+    val mainPagerState = rememberMainPagerState(pagerState)
     val settledPage = pagerState.settledPage
-    val scrollingPageIndex = (pagerState.currentPage + pagerState.currentPageOffsetFraction)
-        .roundToInt()
-        .coerceIn(0, pageSpecs.lastIndex)
-    val activePageIndex = when {
-        pagerState.isScrollInProgress -> scrollingPageIndex
-        else -> settledPage.coerceIn(0, pageSpecs.lastIndex)
-    }
+    val activePageIndex = mainPagerState.selectedPage.coerceIn(0, pageSpecs.lastIndex)
     val activePage = pageSpecs[activePageIndex]
     val miuixScrollBehavior = MiuixScrollBehavior()
     val onPageSelected: (Int) -> Unit = { index ->
-        if (pagerState.isScrollInProgress || settledPage != index) {
-            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-            scope.launch { pagerState.springScrollToPage(index) }
+        if (mainPagerState.selectedPage != index) {
+            mainPagerState.animateToPage(index)
         }
+    }
+
+    LaunchedEffect(pagerState.currentPage) {
+        mainPagerState.syncPage()
     }
 
     LaunchedEffect(settledPage) {
@@ -131,10 +193,14 @@ fun MainPage(
 
     LaunchedEffect(selectedTab) {
         val coercedTarget = selectedTab.coerceIn(0, pageSpecs.lastIndex)
-        if (!pagerState.isScrollInProgress && coercedTarget != settledPage) {
-            if (pagerState.currentPage != coercedTarget) {
-                pagerState.springScrollToPage(coercedTarget)
-            }
+        if (!mainPagerState.isNavigating && coercedTarget != mainPagerState.selectedPage) {
+            mainPagerState.animateToPage(coercedTarget)
+        }
+    }
+
+    LaunchedEffect(pagerState.isScrollInProgress) {
+        if (!pagerState.isScrollInProgress && mainPagerState.isNavigating) {
+            mainPagerState.cancelNavigation()
         }
     }
 
@@ -239,26 +305,44 @@ fun MainPage(
     }
 }
 
-private suspend fun androidx.compose.foundation.pager.PagerState.springScrollToPage(target: Int) {
+private suspend fun PagerState.springAnimateToPage(target: Int) {
     if (target !in 0 until pageCount) return
     scroll(MutatePriority.UserInput) {
-        val tension = 322.2f
-        val damping = 32.31f
         val pageSize = layoutInfo.pageSize + layoutInfo.pageSpacing
         val distance = target - currentPage - currentPageOffsetFraction
         val scrollPixels = distance * pageSize
+        if (abs(scrollPixels) <= 0.5f) {
+            return@scroll
+        }
+
+        val animation = TargetBasedAnimation<Float, AnimationVector1D>(
+            animationSpec = spring(
+                stiffness = 322.2f,
+                dampingRatio = 32.31f / (2f * kotlin.math.sqrt(322.2f)),
+                visibilityThreshold = 0.5f,
+            ),
+            typeConverter = Float.VectorConverter,
+            initialValue = 0f,
+            targetValue = scrollPixels,
+            initialVelocityVector = AnimationVector1D(0f),
+        )
+
         var current = 0f
-        var velocity = 0f
-        var lastNanos = 0L
+        var lastFrameNanos = 0L
+        var playTimeNanos = 0L
         var finished = false
-        withFrameNanos { lastNanos = it }
+
+        withFrameNanos { lastFrameNanos = it }
         while (!finished) {
             withFrameNanos { frameNanos ->
-                val dt = ((frameNanos - lastNanos) / 1e9f).coerceAtMost(0.016f)
-                lastNanos = frameNanos
-                velocity = velocity * (1f - damping * dt) + tension * (scrollPixels - current) * dt
-                val newPos = current + dt * velocity
-                val delta = newPos - current
+                val dtNanos = (frameNanos - lastFrameNanos).coerceAtMost(16_000_000L)
+                lastFrameNanos = frameNanos
+                playTimeNanos += dtNanos
+
+                val currentValue = animation.getValueFromNanos(playTimeNanos)
+                val currentVelocity = animation.getVelocityVectorFromNanos(playTimeNanos).value
+                val delta = currentValue - current
+
                 if (abs(delta) > 0.5f) {
                     val consumed = scrollBy(delta)
                     current += consumed
@@ -266,12 +350,26 @@ private suspend fun androidx.compose.foundation.pager.PagerState.springScrollToP
                         finished = true
                     }
                 } else {
-                    current = newPos
+                    current = currentValue
                 }
-                if (abs(velocity) < 0.1f && abs(scrollPixels - current) < 1.0f) {
+
+                if (abs(currentVelocity) < 0.1f && abs(scrollPixels - current) < 1.0f) {
+                    finished = true
+                }
+
+                if (animation.isFinishedFromNanos(playTimeNanos)) {
                     finished = true
                 }
             }
+        }
+
+        val remaining = scrollPixels - current
+        if (abs(remaining) > 0.5f) {
+            current += scrollBy(remaining)
+        }
+
+        if (currentPage != target) {
+            scrollToPage(target)
         }
     }
 }
