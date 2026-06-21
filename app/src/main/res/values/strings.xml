@@ -1,4 +1,4 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:locale="en">
     <string name="app_name">FuseHide</string>
     <string name="app_description">An Xposed module for Android 12+ that hides regular storage paths in MediaProvider based on runtime configuration, and provides debugging and fixing capabilities for Android/data Unicode scenarios.</string>
     <string name="home_subtitle_runtime">Review the current runtime hook state and the config active inside MediaProvider.</string>
@@ -85,7 +85,7 @@
     <string name="field_hidden_package_names_help">One package name per line. These packages receive global hidden targets; [package.name] sections work even if not listed here.</string>
     <string name="field_primary_path_help">Used by Stat, Access, List, Open, Create, Mkdir, and Unlink.</string>
     <string name="field_secondary_path_help">Used only by Rename/Move.</string>
-    <string name="status_checking">Module status: checking...</string>
+    <string name="status_checking">Module status: checking…</string>
     <string name="status_hooked">Module status: hooked %1$s pid=%2$d</string>
     <string name="status_not_hooked">Module status: not hooked (tap to recheck)</string>
     <string name="config_loaded_saved">Loaded the saved hide config into the editor.</string>
@@ -96,7 +96,7 @@
     <string name="config_applied_ok">The hide config was applied in MediaProvider.</string>
     <string name="config_applied_fail">Failed to reload the hide config: %1$s</string>
     <string name="config_restored_defaults">Restored the default hide config in the editor.</string>
-    <string name="config_snapshot_waiting">Waiting for MediaProvider to apply the config snapshot...</string>
+    <string name="config_snapshot_waiting">Waiting for MediaProvider to apply the config snapshot…</string>
     <string name="config_snapshot_missing">MediaProvider did not return an applied config snapshot.</string>
     <string name="ack_applied">Applied</string>
     <string name="ack_failed">Failed</string>

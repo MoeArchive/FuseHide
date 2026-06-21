@@ -1,8 +1,20 @@
 <resources>
     <string name="app_name">FuseHide</string>
     <string name="app_description">Ein Xposed-Modul für Android 12+, das normale Speicherpfade in MediaProvider anhand der Laufzeitkonfiguration ausblendet und Debugging- sowie Reparaturfunktionen für Android/data Unicode-Szenarien bereitstellt.</string>
+    <string name="home_subtitle_runtime">Überprüfen Sie den aktuellen Laufzeit-Hook-Status und die in MediaProvider aktive Konfiguration.</string>
     <string name="home_subtitle_policy">Die Laufzeit-Konfiguration zum Ausblenden anpassen und prüfen, welche Konfiguration MediaProvider tatsächlich verwendet.</string>
     <string name="home_subtitle_probe">Direkte Pfadprüfungen für den eingehakten MediaProvider-Prozess ausführen.</string>
+    <string name="home_subtitle_settings">UI-Familie wechseln und grundlegende App-Informationen anzeigen.</string>
+    <string name="nav_home">Start</string>
+    <string name="nav_config">Konfiguration</string>
+    <string name="nav_probe">Prüfung</string>
+    <string name="nav_settings">Einstellungen</string>
+    <string name="section_runtime_overview">Laufzeitübersicht</string>
+    <string name="section_runtime_overview_desc">Prüfen Sie, ob der Hook aktiv ist, ob der Editor mit der angewendeten nativen Konfiguration übereinstimmt und was MediaProvider aktuell verwendet.</string>
+    <string name="section_device_status">Gerätestatus</string>
+    <string name="section_ui_family">UI-Familie</string>
+    <string name="section_ui_family_desc">Wählen Sie, ob die App den MIUIX- oder den Material-3-Oberflächenstil verwendet.</string>
+    <string name="section_about">Über</string>
     <string name="section_editable_draft">Konfiguration bearbeiten</string>
     <string name="section_editable_draft_desc">Diese Felder enthalten deine bearbeitbare Konfiguration. „Anwenden“ speichert sie lokal und synchronisiert sie mit MediaProvider.</string>
     <string name="section_apply_feedback">Ergebnis der Anwendung</string>
@@ -17,6 +29,8 @@
     <string name="label_hook">Hook</string>
     <string name="label_sync">Synchronisierung</string>
     <string name="label_device">Gerät</string>
+    <string name="label_runtime_summary">Laufzeitzusammenfassung</string>
+    <string name="label_current_ui_family">Aktuelle UI-Familie</string>
     <string name="label_last_ack">Letzte Bestätigung</string>
     <string name="label_applied_at">Angewendet um</string>
     <string name="label_last_token">Letztes Token</string>
@@ -60,6 +74,9 @@
     <string name="button_self_data">Eigene Daten</string>
     <string name="field_hide_all_title">Alle Verzeichnisse der ersten Ebene ausblenden</string>
     <string name="field_hide_all_desc">Wenn aktiviert, wird jedes Verzeichnis der ersten Ebene unter /storage/emulated/0 ausgeblendet, außer den unten aufgeführten sichtbaren Ausnahmen.</string>
+    <string name="field_use_miuix_title">MIUIX-UI-Familie verwenden</string>
+    <string name="field_use_miuix_desc_enabled">Die App verwendet derzeit den MIUIX-Navigations- und Oberflächenstil. Schalten Sie dies aus, um zu Material 3 zurückzukehren.</string>
+    <string name="field_use_miuix_desc_disabled">Die App verwendet derzeit den Material-3-Navigations- und Oberflächenstil. Schalten Sie dies ein, um zu MIUIX zu wechseln.</string>
     <string name="field_visible_exemptions">Sichtbare Ausnahmen</string>
     <string name="field_visible_exemptions_help">Ein Pfad pro Zeile. Lass Android sichtbar, sofern du nicht genau weißt, was du tust.</string>
     <string name="field_hidden_targets">Ausblendziele</string>
@@ -68,7 +85,7 @@
     <string name="field_hidden_package_names_help">Ein Paketname pro Zeile.</string>
     <string name="field_primary_path_help">Wird von Stat, Access, List, Open, Create, Mkdir und Unlink verwendet.</string>
     <string name="field_secondary_path_help">Wird nur von Rename/Move verwendet.</string>
-    <string name="status_checking">Modulstatus: Wird geprüft...</string>
+    <string name="status_checking">Modulstatus: Wird geprüft…</string>
     <string name="status_hooked">Modulstatus: eingehakt %1$s pid=%2$d</string>
     <string name="status_not_hooked">Modulstatus: nicht eingehakt (zum erneuten Prüfen tippen)</string>
     <string name="config_loaded_saved">Die gespeicherte Ausblend-Konfiguration wurde in den Editor geladen.</string>
@@ -79,7 +96,7 @@
     <string name="config_applied_ok">Die Ausblend-Konfiguration wurde in MediaProvider angewendet.</string>
     <string name="config_applied_fail">Die Ausblend-Konfiguration konnte nicht neu geladen werden: %1$s</string>
     <string name="config_restored_defaults">Die Standard-Ausblend-Konfiguration wurde im Editor wiederhergestellt.</string>
-    <string name="config_snapshot_waiting">Es wird auf den angewendeten Konfigurations-Snapshot von MediaProvider gewartet...</string>
+    <string name="config_snapshot_waiting">Es wird auf den angewendeten Konfigurations-Snapshot von MediaProvider gewartet…</string>
     <string name="config_snapshot_missing">MediaProvider hat keinen angewendeten Konfigurations-Snapshot zurückgegeben.</string>
     <string name="ack_applied">Angewendet</string>
     <string name="ack_failed">Fehlgeschlagen</string>
@@ -87,4 +104,6 @@
     <string name="diff_summary_mismatch">Die nicht gespeicherte Konfiguration stimmt nicht mit der angewendeten MediaProvider-Konfiguration überein.</string>
     <string name="diff_summary_match">Die nicht gespeicherte Konfiguration stimmt mit der angewendeten MediaProvider-Konfiguration überein.</string>
     <string name="probe_output_empty">Noch keine Prüfausgabe.</string>
+    <string name="value_ui_family_miuix">MIUIX</string>
+    <string name="value_ui_family_material">Material 3</string>
 </resources>

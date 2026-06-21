@@ -38,11 +38,11 @@ fun SettingsPage(
     callbacks: SettingsCallbacks,
     contentPadding: PaddingValues,
     isCurrentPage: Boolean = true,
-    scrollModifier: Modifier = Modifier,
+    modifier: Modifier = Modifier,
     title: String = stringResource(R.string.app_name),
     subtitle: String = stringResource(R.string.home_subtitle_settings),
 ) {
-    SettingsPageContent(state, callbacks, contentPadding, scrollModifier)
+    SettingsPageContent(state, callbacks, contentPadding, modifier)
 }
 
 @Composable
@@ -50,7 +50,7 @@ private fun SettingsPageContent(
     state: SettingsUiState,
     callbacks: SettingsCallbacks,
     contentPadding: PaddingValues,
-    scrollModifier: Modifier,
+    modifier: Modifier,
 ) {
     val scrollState = rememberScrollState()
     val groupHorizontalPadding = if (LocalUiMode.current == UiMode.Miuix) 12.dp else 16.dp
@@ -58,7 +58,7 @@ private fun SettingsPageContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .then(scrollModifier)
+            .then(modifier)
             .verticalScroll(scrollState)
             .padding(contentPadding)
             .padding(vertical = 16.dp),

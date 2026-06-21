@@ -51,7 +51,7 @@ fun ConfigPage(
     callbacks: ConfigCallbacks,
     contentPadding: PaddingValues,
     isCurrentPage: Boolean = true,
-    scrollModifier: Modifier = Modifier,
+    modifier: Modifier = Modifier,
     title: String = stringResource(R.string.app_name),
     subtitle: String = stringResource(R.string.home_subtitle_policy),
 ) {
@@ -74,7 +74,7 @@ fun ConfigPage(
         onShowDetailedDiffChanged = { showDetailedDiff = it },
         resultsNeedAttention = resultsNeedAttention,
         view = view,
-        scrollModifier = scrollModifier,
+        modifier = modifier,
     )
 }
 
@@ -87,14 +87,14 @@ private fun ConfigPageContent(
     onShowDetailedDiffChanged: (Boolean) -> Unit,
     resultsNeedAttention: Boolean,
     view: android.view.View,
-    scrollModifier: Modifier,
+    modifier: Modifier,
 ) {
     val scrollState = rememberScrollState()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .then(scrollModifier)
+            .then(modifier)
             .verticalScroll(scrollState)
             .padding(contentPadding)
             .padding(horizontal = 16.dp, vertical = 16.dp),

@@ -16,6 +16,7 @@
 
 package io.github.xiaotong6666.fusehide.xposed;
 
+import android.annotation.SuppressLint;
 import android.app.Application;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -192,6 +193,7 @@ public class Entry extends XposedModule {
     }
 
     @Override
+    @SuppressLint("PrivateApi")
     public void onPackageLoaded(@androidx.annotation.NonNull PackageLoadedParam param) {
         final String packageName = param.getPackageName();
         if (!PACKAGE_MEDIA.equals(packageName) && !PACKAGE_MEDIA_GOOGLE.equals(packageName)) {
@@ -228,6 +230,7 @@ public class Entry extends XposedModule {
         }
     }
 
+    @SuppressLint({"DiscouragedPrivateApi", "PrivateApi"})
     private void hookApplicationAttach(ClassLoader classLoader) {
         try {
             Class<?> applicationClass = classLoader.loadClass("android.app.Application");
@@ -247,6 +250,7 @@ public class Entry extends XposedModule {
         }
     }
 
+    @SuppressLint({"DiscouragedPrivateApi", "PrivateApi"})
     public void registerStatusReceiver() {
         try {
             Application application = hookedApplication;

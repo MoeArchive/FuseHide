@@ -1,8 +1,20 @@
 <resources>
     <string name="app_name">FuseHide</string>
     <string name="app_description">Android 12以降向けのXposedモジュールです。実行時設定に基づいてMediaProvider内の通常ストレージパスを非表示にし、Android/dataのUnicode関連ケースに対するデバッグおよび修正機能を提供します。</string>
+    <string name="home_subtitle_runtime">現在のランタイム Hook 状態と MediaProvider 内で有効な設定を確認します。</string>
     <string name="home_subtitle_policy">実行時の隠蔽設定を調整し、MediaProviderで実際に使われている設定を確認します。</string>
     <string name="home_subtitle_probe">Hook済みの MediaProvider プロセスに対して直接パス検査を実行します。</string>
+    <string name="home_subtitle_settings">UI ファミリーを切り替え、基本的なアプリ情報を確認します。</string>
+    <string name="nav_home">ホーム</string>
+    <string name="nav_config">設定</string>
+    <string name="nav_probe">検査</string>
+    <string name="nav_settings">環境設定</string>
+    <string name="section_runtime_overview">ランタイム概要</string>
+    <string name="section_runtime_overview_desc">Hook が有効か、エディタが適用済み Native 設定と一致しているか、そして MediaProvider が現在何を使用しているかを確認します。</string>
+    <string name="section_device_status">デバイス状態</string>
+    <string name="section_ui_family">UI ファミリー</string>
+    <string name="section_ui_family_desc">アプリで MIUIX の外観スタイルを使うか、Material 3 の外観スタイルを使うかを選択します。</string>
+    <string name="section_about">このアプリについて</string>
     <string name="section_editable_draft">編集設定</string>
     <string name="section_editable_draft_desc">ここに表示される項目は編集可能な設定です。「適用」を押すとローカルに保存し、MediaProvider に同期します。</string>
     <string name="section_apply_feedback">適用結果</string>
@@ -17,6 +29,8 @@
     <string name="label_hook">Hook</string>
     <string name="label_sync">同期</string>
     <string name="label_device">デバイス</string>
+    <string name="label_runtime_summary">ランタイム概要</string>
+    <string name="label_current_ui_family">現在の UI ファミリー</string>
     <string name="label_last_ack">最終確認</string>
     <string name="label_applied_at">適用時刻</string>
     <string name="label_last_token">最終トークン</string>
@@ -60,6 +74,9 @@
     <string name="button_self_data">自身のデータ</string>
     <string name="field_hide_all_title">すべての第一階層ディレクトリを隠す</string>
     <string name="field_hide_all_desc">有効にすると、/storage/emulated/0 配下の第一階層ディレクトリは、以下の例外を除いてすべて隠されます。</string>
+    <string name="field_use_miuix_title">MIUIX UI ファミリーを使う</string>
+    <string name="field_use_miuix_desc_enabled">現在、アプリは MIUIX のナビゲーションと外観スタイルを使用しています。オフにすると Material 3 に戻ります。</string>
+    <string name="field_use_miuix_desc_disabled">現在、アプリは Material 3 のナビゲーションと外観スタイルを使用しています。オンにすると MIUIX に切り替わります。</string>
     <string name="field_visible_exemptions">表示例外</string>
     <string name="field_visible_exemptions_help">1 行に 1 つのパスを指定します。明確な理由がない限り、Android は表示したままにしてください。</string>
     <string name="field_hidden_targets">隠す対象</string>
@@ -68,7 +85,7 @@
     <string name="field_hidden_package_names_help">1 行に 1 つのパッケージ名を指定します。</string>
     <string name="field_primary_path_help">Stat、Access、List、Open、Create、Mkdir、Unlink で使用します。</string>
     <string name="field_secondary_path_help">Rename/Move でのみ使用します。</string>
-    <string name="status_checking">モジュール状態：確認中...</string>
+    <string name="status_checking">モジュール状態：確認中…</string>
     <string name="status_hooked">モジュール状態：Hook済み %1$s pid=%2$d</string>
     <string name="status_not_hooked">モジュール状態：未Hook（タップして再確認）</string>
     <string name="config_loaded_saved">保存済みの隠蔽設定をエディタに読み込みました。</string>
@@ -77,7 +94,7 @@
     <string name="config_applied_ok">隠蔽設定を MediaProvider に適用しました。</string>
     <string name="config_applied_fail">隠蔽設定の再読み込みに失敗しました：%1$s</string>
     <string name="config_restored_defaults">デフォルトの隠蔽設定をエディタで復元しました。</string>
-    <string name="config_snapshot_waiting">MediaProvider による設定スナップショットの適用を待機中...</string>
+    <string name="config_snapshot_waiting">MediaProvider による設定スナップショットの適用を待機中…</string>
     <string name="config_snapshot_missing">MediaProvider から適用済み設定のスナップショットが返されませんでした。</string>
     <string name="ack_applied">適用済み</string>
     <string name="ack_failed">失敗</string>
@@ -87,4 +104,6 @@
     <string name="probe_output_empty">検査出力はまだありません。</string>
     <string name="config_missing_local">保存されたローカル設定が見つかりませんでした。デフォルト値はプレースホルダーとして表示されているだけで、明示的にデフォルト値を復元しない限り保存されません。</string>
     <string name="config_recovered_applied">現在適用されているMediaProviderの設定から、エディターとローカルストレージを復元しました。</string>
+    <string name="value_ui_family_miuix">MIUIX</string>
+    <string name="value_ui_family_material">Material 3</string>
 </resources>
