@@ -23,6 +23,7 @@ import android.os.Binder
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import androidx.core.content.ContextCompat
 import java.lang.ref.ReferenceQueue
 import java.lang.ref.WeakReference
 
@@ -39,7 +40,10 @@ class HookStatusProbe(
         val binderReference = WeakReference(binder, referenceQueue)
 
         val intent = Intent(ACTION_GET_STATUS).setPackage(APP_PACKAGE)
-        intent.putExtra("EXTRA_PENDING_INTENT", PendingIntent.getBroadcast(context, 1, intent, 67108864))
+        intent.putExtra(
+            "EXTRA_PENDING_INTENT",
+            PendingIntent.getBroadcast(context, 1, intent, PendingIntent.FLAG_IMMUTABLE),
+        )
         intent.extras?.putBinder("EXTRA_BINDER", binder)
 
         MEDIA_PROVIDER_PACKAGES.forEach { packageName ->
@@ -75,6 +79,6 @@ class HookStatusProbe(
             "com.android.providers.media.module",
         )
 
-        fun registerReceiverFlags(): Int = if (android.os.Build.VERSION.SDK_INT >= 33) Context.RECEIVER_EXPORTED else 0
+        fun registerReceiverFlags(): Int = ContextCompat.RECEIVER_EXPORTED
     }
 }

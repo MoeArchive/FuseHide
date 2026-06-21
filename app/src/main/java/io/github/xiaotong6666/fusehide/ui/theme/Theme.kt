@@ -23,7 +23,7 @@ import io.github.xiaotong6666.fusehide.ui.LocalUiMode
 import io.github.xiaotong6666.fusehide.ui.UiMode
 
 @Composable
-fun fuseHideTheme(content: @Composable () -> Unit) {
+fun FuseHideTheme(content: @Composable () -> Unit) {
     when (LocalUiMode.current) {
         UiMode.Miuix -> MiuixFuseHideTheme(content)
         UiMode.Material -> MaterialFuseHideTheme(content)

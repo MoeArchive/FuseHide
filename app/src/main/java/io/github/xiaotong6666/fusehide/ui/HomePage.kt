@@ -43,7 +43,7 @@ fun HomePage(
     callbacks: HomeCallbacks,
     contentPadding: PaddingValues,
     isCurrentPage: Boolean = true,
-    scrollModifier: Modifier = Modifier,
+    modifier: Modifier = Modifier,
     title: String = stringResource(R.string.app_name),
     subtitle: String = stringResource(R.string.home_subtitle_runtime),
 ) {
@@ -56,7 +56,7 @@ fun HomePage(
         contentPadding = contentPadding,
         isCurrentPage = isCurrentPage,
         resultsNeedAttention = resultsNeedAttention,
-        scrollModifier = scrollModifier,
+        modifier = modifier,
     )
 }
 
@@ -68,13 +68,13 @@ private fun HomePageContent(
     contentPadding: PaddingValues,
     isCurrentPage: Boolean,
     resultsNeedAttention: Boolean,
-    scrollModifier: Modifier,
+    modifier: Modifier,
 ) {
     val scrollState = rememberScrollState()
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .then(scrollModifier)
+            .then(modifier)
             .verticalScroll(scrollState)
             .padding(contentPadding)
             .padding(horizontal = 16.dp, vertical = 16.dp),

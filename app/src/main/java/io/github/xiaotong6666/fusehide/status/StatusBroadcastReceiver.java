@@ -21,6 +21,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.ContextWrapper;
 import android.content.Intent;
+import android.os.Build;
 import android.os.Process;
 import android.util.Log;
 import io.github.xiaotong6666.fusehide.ui.MainActivity;
@@ -33,6 +34,14 @@ public final class StatusBroadcastReceiver extends BroadcastReceiver {
     private static final String PACKAGE_MEDIA_GOOGLE = "com.google.android.providers.media.module";
     private final int mode;
     private final ContextWrapper owner;
+
+    @SuppressWarnings("deprecation")
+    private static PendingIntent getPendingIntentExtra(Intent intent) {
+        if (Build.VERSION.SDK_INT >= 33) {
+            return intent.getParcelableExtra("EXTRA_PENDING_INTENT", PendingIntent.class);
+        }
+        return intent.getParcelableExtra("EXTRA_PENDING_INTENT");
+    }
 
     public StatusBroadcastReceiver(ContextWrapper owner, int mode) {
         this.mode = mode;
@@ -51,7 +60,7 @@ public final class StatusBroadcastReceiver extends BroadcastReceiver {
     private void handleGetStatus(Intent intent) {
         try {
             Log.d("FuseHide", "recv " + intent);
-            PendingIntent pendingIntent = intent.getParcelableExtra("EXTRA_PENDING_INTENT", PendingIntent.class);
+            PendingIntent pendingIntent = getPendingIntentExtra(intent);
             if (pendingIntent == null) {
                 Log.e("FuseHide", "no pendingintent?");
                 return;
@@ -81,7 +90,7 @@ public final class StatusBroadcastReceiver extends BroadcastReceiver {
         MainActivity mainActivity = (MainActivity) owner;
         try {
             Log.d("FuseHide", "recv status " + intent);
-            PendingIntent pendingIntent = intent.getParcelableExtra("EXTRA_PENDING_INTENT", PendingIntent.class);
+            PendingIntent pendingIntent = getPendingIntentExtra(intent);
             if (pendingIntent == null) {
                 Log.e("FuseHide", "status pendingintent missing");
                 return;

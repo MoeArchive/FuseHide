@@ -1,8 +1,20 @@
 <resources>
     <string name="app_name">FuseHide</string>
     <string name="app_description">Un módulo Xposed para Android 12+ que permite ocultar rutas de almacenamiento normales en MediaProvider según la configuración en tiempo de ejecución y proporciona funciones de depuración y corrección para escenarios Unicode relacionados con Android/data.</string>
+    <string name="home_subtitle_runtime">Revisa el estado actual del hook en tiempo de ejecución y la configuración activa dentro de MediaProvider.</string>
     <string name="home_subtitle_policy">Ajusta la configuración de ocultación en tiempo de ejecución y comprueba qué configuración está usando realmente MediaProvider.</string>
     <string name="home_subtitle_probe">Ejecuta comprobaciones directas de rutas en el proceso MediaProvider enganchado.</string>
+    <string name="home_subtitle_settings">Cambia la familia de UI y revisa la información básica de la aplicación.</string>
+    <string name="nav_home">Inicio</string>
+    <string name="nav_config">Configuración</string>
+    <string name="nav_probe">Sonda</string>
+    <string name="nav_settings">Ajustes</string>
+    <string name="section_runtime_overview">Resumen de ejecución</string>
+    <string name="section_runtime_overview_desc">Comprueba si el hook está activo, si el editor coincide con la configuración nativa aplicada y qué está usando actualmente MediaProvider.</string>
+    <string name="section_device_status">Estado del dispositivo</string>
+    <string name="section_ui_family">Familia de UI</string>
+    <string name="section_ui_family_desc">Elige si la aplicación usa el estilo visual de MIUIX o el de Material 3.</string>
+    <string name="section_about">Acerca de</string>
     <string name="section_editable_draft">Editar configuración</string>
     <string name="section_editable_draft_desc">Estos campos contienen tu configuración editable. «Aplicar» la guarda localmente y la sincroniza con MediaProvider.</string>
     <string name="section_apply_feedback">Resultado de la aplicación</string>
@@ -17,6 +29,8 @@
     <string name="label_hook">Hook</string>
     <string name="label_sync">Sincronización</string>
     <string name="label_device">Dispositivo</string>
+    <string name="label_runtime_summary">Resumen de ejecución</string>
+    <string name="label_current_ui_family">Familia de UI actual</string>
     <string name="label_last_ack">Última confirmación</string>
     <string name="label_applied_at">Aplicado a las</string>
     <string name="label_last_token">Último token</string>
@@ -60,6 +74,9 @@
     <string name="button_self_data">Datos propios</string>
     <string name="field_hide_all_title">Ocultar todos los directorios de primer nivel</string>
     <string name="field_hide_all_desc">Cuando está activado, se oculta cada directorio de primer nivel bajo /storage/emulated/0, salvo las excepciones visibles de abajo.</string>
+    <string name="field_use_miuix_title">Usar la familia de UI MIUIX</string>
+    <string name="field_use_miuix_desc_enabled">La aplicación usa actualmente la navegación y el estilo visual de MIUIX. Desactívalo para volver a Material 3.</string>
+    <string name="field_use_miuix_desc_disabled">La aplicación usa actualmente la navegación y el estilo visual de Material 3. Actívalo para cambiar a MIUIX.</string>
     <string name="field_visible_exemptions">Excepciones visibles</string>
     <string name="field_visible_exemptions_help">Una ruta por línea. Mantén Android visible salvo que sepas exactamente lo que estás haciendo.</string>
     <string name="field_hidden_targets">Objetivos ocultos</string>
@@ -68,7 +85,7 @@
     <string name="field_hidden_package_names_help">Un nombre de paquete por línea.</string>
     <string name="field_primary_path_help">Se usa con Stat, Access, List, Open, Create, Mkdir y Unlink.</string>
     <string name="field_secondary_path_help">Se usa solo con Rename/Move.</string>
-    <string name="status_checking">Estado del módulo: comprobando...</string>
+    <string name="status_checking">Estado del módulo: comprobando…</string>
     <string name="status_hooked">Estado del módulo: enganchado %1$s pid=%2$d</string>
     <string name="status_not_hooked">Estado del módulo: no enganchado (toca para volver a comprobar)</string>
     <string name="config_loaded_saved">Se cargó en el editor la configuración de ocultación guardada.</string>
@@ -79,7 +96,7 @@
     <string name="config_applied_ok">La configuración de ocultación se aplicó en MediaProvider.</string>
     <string name="config_applied_fail">No se pudo recargar la configuración de ocultación: %1$s</string>
     <string name="config_restored_defaults">Se restauró en el editor la configuración de ocultación predeterminada.</string>
-    <string name="config_snapshot_waiting">Esperando la instantánea de la configuración aplicada de MediaProvider...</string>
+    <string name="config_snapshot_waiting">Esperando la instantánea de la configuración aplicada de MediaProvider…</string>
     <string name="config_snapshot_missing">MediaProvider no devolvió ninguna instantánea de la configuración aplicada.</string>
     <string name="ack_applied">Aplicado</string>
     <string name="ack_failed">Error</string>
@@ -87,4 +104,6 @@
     <string name="diff_summary_mismatch">La configuración sin guardar no coincide con la configuración aplicada de MediaProvider.</string>
     <string name="diff_summary_match">La configuración sin guardar coincide con la configuración aplicada de MediaProvider.</string>
     <string name="probe_output_empty">Todavía no hay salida de comprobación.</string>
+    <string name="value_ui_family_miuix">MIUIX</string>
+    <string name="value_ui_family_material">Material 3</string>
 </resources>

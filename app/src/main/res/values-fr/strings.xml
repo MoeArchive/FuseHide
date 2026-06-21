@@ -1,8 +1,20 @@
 <resources>
     <string name="app_name">FuseHide</string>
     <string name="app_description">Un module Xposed pour Android 12+ permettant de masquer les chemins de stockage classiques dans MediaProvider selon la configuration d\'exécution, avec des outils de débogage et de correction pour les scénarios Unicode liés à Android/data.</string>
+    <string name="home_subtitle_runtime">Vérifiez l’état actuel du hook d’exécution et la configuration active dans MediaProvider.</string>
     <string name="home_subtitle_policy">Ajustez la configuration de masquage à l’exécution et vérifiez la configuration réellement utilisée par MediaProvider.</string>
     <string name="home_subtitle_probe">Exécutez des vérifications de chemin direct sur le processus MediaProvider accroché.</string>
+    <string name="home_subtitle_settings">Changez la famille d’interface et consultez les informations de base de l’application.</string>
+    <string name="nav_home">Accueil</string>
+    <string name="nav_config">Configuration</string>
+    <string name="nav_probe">Sonde</string>
+    <string name="nav_settings">Paramètres</string>
+    <string name="section_runtime_overview">Vue d’ensemble de l’exécution</string>
+    <string name="section_runtime_overview_desc">Vérifiez si le hook est actif, si l’éditeur correspond à la configuration native appliquée et ce que MediaProvider utilise actuellement.</string>
+    <string name="section_device_status">État de l’appareil</string>
+    <string name="section_ui_family">Famille d’interface</string>
+    <string name="section_ui_family_desc">Choisissez si l’application utilise le style visuel MIUIX ou celui de Material 3.</string>
+    <string name="section_about">À propos</string>
     <string name="section_editable_draft">Modifier la configuration</string>
     <string name="section_editable_draft_desc">Ces champs correspondent à votre configuration modifiable. « Appliquer » l’enregistre localement et la synchronise avec MediaProvider.</string>
     <string name="section_apply_feedback">Résultat de l’application</string>
@@ -17,6 +29,8 @@
     <string name="label_hook">Hook</string>
     <string name="label_sync">Synchronisation</string>
     <string name="label_device">Appareil</string>
+    <string name="label_runtime_summary">Résumé de l’exécution</string>
+    <string name="label_current_ui_family">Famille d’interface actuelle</string>
     <string name="label_last_ack">Dernière confirmation</string>
     <string name="label_applied_at">Appliqué à</string>
     <string name="label_last_token">Dernier jeton</string>
@@ -60,6 +74,9 @@
     <string name="button_self_data">Données de l’application</string>
     <string name="field_hide_all_title">Masquer tous les répertoires du premier niveau</string>
     <string name="field_hide_all_desc">Lorsqu’elle est activée, chaque répertoire du premier niveau sous /storage/emulated/0 est masqué, sauf les exceptions visibles ci-dessous.</string>
+    <string name="field_use_miuix_title">Utiliser la famille d’interface MIUIX</string>
+    <string name="field_use_miuix_desc_enabled">L’application utilise actuellement la navigation et le style visuel MIUIX. Désactivez cette option pour revenir à Material 3.</string>
+    <string name="field_use_miuix_desc_disabled">L’application utilise actuellement la navigation et le style visuel Material 3. Activez cette option pour passer à MIUIX.</string>
     <string name="field_visible_exemptions">Exceptions visibles</string>
     <string name="field_visible_exemptions_help">Un chemin par ligne. Laissez Android visible, sauf si vous savez exactement ce que vous faites.</string>
     <string name="field_hidden_targets">Cibles masquées</string>
@@ -68,7 +85,7 @@
     <string name="field_hidden_package_names_help">Un nom de package par ligne.</string>
     <string name="field_primary_path_help">Utilisé par Stat, Access, List, Open, Create, Mkdir et Unlink.</string>
     <string name="field_secondary_path_help">Utilisé uniquement par Rename/Move.</string>
-    <string name="status_checking">Statut du module : vérification en cours...</string>
+    <string name="status_checking">Statut du module : vérification en cours…</string>
     <string name="status_hooked">Statut du module : accroché %1$s pid=%2$d</string>
     <string name="status_not_hooked">Statut du module : non accroché (appuyez pour vérifier à nouveau)</string>
     <string name="config_loaded_saved">La configuration de masquage enregistrée a été chargée dans l’éditeur.</string>
@@ -77,7 +94,7 @@
     <string name="config_applied_ok">La configuration de masquage a été appliquée dans MediaProvider.</string>
     <string name="config_applied_fail">Impossible de recharger la configuration de masquage : %1$s</string>
     <string name="config_restored_defaults">La configuration de masquage par défaut a été restaurée dans l’éditeur.</string>
-    <string name="config_snapshot_waiting">En attente de l’instantané de la configuration appliquée par MediaProvider...</string>
+    <string name="config_snapshot_waiting">En attente de l’instantané de la configuration appliquée par MediaProvider…</string>
     <string name="config_snapshot_missing">MediaProvider n’a renvoyé aucun instantané de configuration appliquée.</string>
     <string name="ack_applied">Appliqué</string>
     <string name="ack_failed">Échec</string>
@@ -87,4 +104,6 @@
     <string name="probe_output_empty">Aucune sortie de vérification pour le moment.</string>
     <string name="config_missing_local">Aucune configuration locale enregistrée n\'a été trouvée. Les valeurs par défaut ne sont affichées qu\'à titre indicatif ; elles ne seront pas enregistrées sauf si vous les rétablissez explicitement.</string>
     <string name="config_recovered_applied">Récupération de l\'éditeur et du stockage local à partir de la configuration MediaProvider actuellement appliquée.</string>
+    <string name="value_ui_family_miuix">MIUIX</string>
+    <string name="value_ui_family_material">Material 3</string>
 </resources>

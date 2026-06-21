@@ -68,7 +68,7 @@ object HideConfigStore {
 
     private val providerUri: Uri = Uri.parse("content://$AUTHORITY")
 
-    private fun snapshotContext(context: Context): Context = if (Build.VERSION.SDK_INT >= 24) context.createDeviceProtectedStorageContext() else context
+    private fun snapshotContext(context: Context): Context = context.createDeviceProtectedStorageContext()
 
     private fun hasValidSnapshot(prefs: android.content.SharedPreferences): Boolean = prefs.getInt(KEY_SNAPSHOT_VERSION, 0) == SNAPSHOT_VERSION
 

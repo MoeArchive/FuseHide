@@ -233,15 +233,15 @@ fun MainPage(
                     modifier = Modifier.fillMaxSize(),
                     overscrollEffect = null,
                 ) { page ->
-                    val scrollModifier = Modifier
+                    val pageModifier = Modifier
                         .then(if (page == pagerState.currentPage) Modifier.overScrollVertical() else Modifier)
                         .nestedScroll(miuixScrollBehavior.nestedScrollConnection)
 
                     when (page) {
-                        0 -> HomePage(hookStatus = hookStatus, configState = configState, callbacks = homeCallbacks, contentPadding = paddingValues, isCurrentPage = page == pagerState.currentPage, scrollModifier = scrollModifier, title = stringResource(R.string.app_name), subtitle = activePage.subtitle)
-                        1 -> ConfigPage(hookStatus = hookStatus, state = configState, callbacks = configCallbacks, contentPadding = paddingValues, isCurrentPage = page == pagerState.currentPage, scrollModifier = scrollModifier, title = stringResource(R.string.app_name), subtitle = activePage.subtitle)
-                        2 -> DebugPage(state = debugState, callbacks = debugCallbacks, contentPadding = paddingValues, isCurrentPage = page == pagerState.currentPage, scrollModifier = scrollModifier, title = stringResource(R.string.app_name), subtitle = activePage.subtitle)
-                        else -> SettingsPage(state = settingsState, callbacks = settingsCallbacks, contentPadding = paddingValues, isCurrentPage = page == pagerState.currentPage, scrollModifier = scrollModifier, title = stringResource(R.string.app_name), subtitle = activePage.subtitle)
+                        0 -> HomePage(hookStatus = hookStatus, configState = configState, callbacks = homeCallbacks, contentPadding = paddingValues, isCurrentPage = page == pagerState.currentPage, modifier = pageModifier, title = stringResource(R.string.app_name), subtitle = activePage.subtitle)
+                        1 -> ConfigPage(hookStatus = hookStatus, state = configState, callbacks = configCallbacks, contentPadding = paddingValues, isCurrentPage = page == pagerState.currentPage, modifier = pageModifier, title = stringResource(R.string.app_name), subtitle = activePage.subtitle)
+                        2 -> DebugPage(state = debugState, callbacks = debugCallbacks, contentPadding = paddingValues, isCurrentPage = page == pagerState.currentPage, modifier = pageModifier, title = stringResource(R.string.app_name), subtitle = activePage.subtitle)
+                        else -> SettingsPage(state = settingsState, callbacks = settingsCallbacks, contentPadding = paddingValues, isCurrentPage = page == pagerState.currentPage, modifier = pageModifier, title = stringResource(R.string.app_name), subtitle = activePage.subtitle)
                     }
                 }
             }
@@ -357,7 +357,7 @@ private suspend fun PagerState.springAnimateToPage(target: Int) {
 @Preview(showBackground = true, device = "id:pixel_9_pro")
 @Composable
 private fun PreviewMainPage() {
-    io.github.xiaotong6666.fusehide.ui.theme.fuseHideTheme {
+    io.github.xiaotong6666.fusehide.ui.theme.FuseHideTheme {
         MainPage(
             selectedTab = 0,
             onTabSelected = {},

@@ -16,6 +16,7 @@
 
 package io.github.xiaotong6666.fusehide.ui
 
+import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -32,8 +33,10 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.core.content.ContextCompat
 import io.github.xiaotong6666.fusehide.R
 import io.github.xiaotong6666.fusehide.config.HideConfig
 import io.github.xiaotong6666.fusehide.config.HideConfigDefaults
@@ -47,7 +50,7 @@ import io.github.xiaotong6666.fusehide.debug.PathDebugActions
 import io.github.xiaotong6666.fusehide.debug.PathDebugText
 import io.github.xiaotong6666.fusehide.status.HookStatusProbe
 import io.github.xiaotong6666.fusehide.status.StatusBroadcastReceiver
-import io.github.xiaotong6666.fusehide.ui.theme.fuseHideTheme
+import io.github.xiaotong6666.fusehide.ui.theme.FuseHideTheme
 import java.lang.ref.WeakReference
 import java.util.UUID
 
@@ -56,6 +59,7 @@ class MainActivity : ComponentActivity() {
         private const val EXTRA_DEBUG_PATH = "debug_path"
         private const val EXTRA_DEBUG_ACTIONS = "debug_actions"
 
+        @SuppressLint("PrivateApi")
         fun getBooleanSystemProperty(name: String): Boolean = try {
             Class.forName("android.os.SystemProperties")
                 .getDeclaredMethod("getBoolean", String::class.java, Boolean::class.javaPrimitiveType)
@@ -68,7 +72,7 @@ class MainActivity : ComponentActivity() {
 
     private var infoText by mutableStateOf("")
     private var statusText by mutableStateOf("")
-    private var selectedTab by mutableStateOf(0)
+    private var selectedTab by mutableIntStateOf(0)
     private var configStatusText by mutableStateOf("")
     private var lastAckTokenText by mutableStateOf("-")
     private var lastAckResultText by mutableStateOf("-")
@@ -78,7 +82,7 @@ class MainActivity : ComponentActivity() {
     private var highlightConfigResults by mutableStateOf(false)
     private var localConfigMissing by mutableStateOf(false)
     private var defaultSaveExplicitlyRequested: Boolean = false
-    private var configResultsScrollToken by mutableStateOf(0)
+    private var configResultsScrollToken by mutableIntStateOf(0)
     private var shouldAutoScrollConfigResults by mutableStateOf(false)
     private var enableHideAllRootEntries by mutableStateOf(HideConfigDefaults.value.enableHideAllRootEntries)
     private var hideAllRootEntriesExemptionsText by mutableStateOf(
@@ -139,11 +143,7 @@ class MainActivity : ComponentActivity() {
 
         statusReceiver = StatusBroadcastReceiver(this, 1)
         val filter = IntentFilter(HookStatusProbe.ACTION_SET_STATUS)
-        if (Build.VERSION.SDK_INT >= 33) {
-            registerReceiver(statusReceiver, filter, HookStatusProbe.registerReceiverFlags())
-        } else {
-            registerReceiver(statusReceiver, filter)
-        }
+        ContextCompat.registerReceiver(this, statusReceiver, filter, HookStatusProbe.registerReceiverFlags())
 
         configStatusReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: android.content.Context?, intent: Intent?) {
@@ -171,11 +171,7 @@ class MainActivity : ComponentActivity() {
             }
         }
         val configFilter = IntentFilter(HideConfigStore.ACTION_SET_CONFIG_STATUS)
-        if (Build.VERSION.SDK_INT >= 33) {
-            registerReceiver(configStatusReceiver, configFilter, RECEIVER_EXPORTED)
-        } else {
-            registerReceiver(configStatusReceiver, configFilter)
-        }
+        ContextCompat.registerReceiver(this, configStatusReceiver, configFilter, ContextCompat.RECEIVER_EXPORTED)
 
         appliedConfigReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: android.content.Context?, intent: Intent?) {
@@ -203,15 +199,11 @@ class MainActivity : ComponentActivity() {
             }
         }
         val appliedConfigFilter = IntentFilter(HideConfigStore.ACTION_SET_APPLIED_HIDE_CONFIG)
-        if (Build.VERSION.SDK_INT >= 33) {
-            registerReceiver(appliedConfigReceiver, appliedConfigFilter, RECEIVER_EXPORTED)
-        } else {
-            registerReceiver(appliedConfigReceiver, appliedConfigFilter)
-        }
+        ContextCompat.registerReceiver(this, appliedConfigReceiver, appliedConfigFilter, ContextCompat.RECEIVER_EXPORTED)
 
         setContent {
             CompositionLocalProvider(LocalUiMode provides uiMode) {
-                fuseHideTheme {
+                FuseHideTheme {
                     val homeCallbacks = HomeCallbacks(
                         onStatusClick = {
                             startStatusCheck()

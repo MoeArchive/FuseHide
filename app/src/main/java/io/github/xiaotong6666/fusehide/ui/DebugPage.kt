@@ -40,11 +40,11 @@ fun DebugPage(
     callbacks: DebugCallbacks,
     contentPadding: PaddingValues,
     isCurrentPage: Boolean = true,
-    scrollModifier: Modifier = Modifier,
+    modifier: Modifier = Modifier,
     title: String = stringResource(R.string.app_name),
     subtitle: String = stringResource(R.string.home_subtitle_probe),
 ) {
-    DebugPageContent(state, callbacks, contentPadding, scrollModifier)
+    DebugPageContent(state, callbacks, contentPadding, modifier)
 }
 
 @Composable
@@ -52,13 +52,13 @@ private fun DebugPageContent(
     state: DebugUiState,
     callbacks: DebugCallbacks,
     contentPadding: PaddingValues,
-    scrollModifier: Modifier,
+    modifier: Modifier,
 ) {
     val scrollState = rememberScrollState()
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .then(scrollModifier)
+            .then(modifier)
             .verticalScroll(scrollState)
             .padding(contentPadding)
             .padding(horizontal = 16.dp, vertical = 16.dp),
