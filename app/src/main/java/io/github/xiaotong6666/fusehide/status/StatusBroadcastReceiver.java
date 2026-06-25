@@ -30,6 +30,7 @@ public final class StatusBroadcastReceiver extends BroadcastReceiver {
     private static final String APP_PACKAGE = "io.github.xiaotong6666.fusehide";
     private static final String ACTION_GET_STATUS = APP_PACKAGE + ".GET_STATUS";
     private static final String ACTION_SET_STATUS = APP_PACKAGE + ".SET_STATUS";
+    private static final String EXTRA_STATUS_QUERY_TOKEN = APP_PACKAGE + ".extra.STATUS_QUERY_TOKEN";
     private static final String PACKAGE_MEDIA = "com.android.providers.media.module";
     private static final String PACKAGE_MEDIA_GOOGLE = "com.google.android.providers.media.module";
     private final int mode;
@@ -75,6 +76,7 @@ public final class StatusBroadcastReceiver extends BroadcastReceiver {
                     "EXTRA_PENDING_INTENT",
                     PendingIntent.getBroadcast(owner, 1, statusIntent, PendingIntent.FLAG_IMMUTABLE));
             statusIntent.putExtra("EXTRA_PID", Process.myPid());
+            statusIntent.putExtra(EXTRA_STATUS_QUERY_TOKEN, intent.getStringExtra(EXTRA_STATUS_QUERY_TOKEN));
             if (statusIntent.getExtras() != null) {
                 statusIntent
                         .getExtras()
@@ -90,15 +92,7 @@ public final class StatusBroadcastReceiver extends BroadcastReceiver {
         MainActivity mainActivity = (MainActivity) owner;
         try {
             Log.d("FuseHide", "recv status " + intent);
-            PendingIntent pendingIntent = getPendingIntentExtra(intent);
-            if (pendingIntent == null) {
-                Log.e("FuseHide", "status pendingintent missing");
-                return;
-            }
-            String creatorPackage = pendingIntent.getCreatorPackage();
-            if (PACKAGE_MEDIA.equals(creatorPackage) || PACKAGE_MEDIA_GOOGLE.equals(creatorPackage)) {
-                mainActivity.onHookStatusReceived(creatorPackage, intent.getIntExtra("EXTRA_PID", -1));
-            }
+            mainActivity.handleHookStatusIntent(intent);
         } catch (Throwable th) {
             Log.e("FuseHide", "send: ", th);
         }

@@ -17,6 +17,7 @@
 package io.github.xiaotong6666.fusehide.ui
 
 import android.annotation.SuppressLint
+import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -25,6 +26,8 @@ import android.content.IntentFilter
 import android.os.Binder
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.system.Os
 import android.system.StructUtsname
 import android.util.Log
@@ -104,7 +107,9 @@ class MainActivity : ComponentActivity() {
     private var statusBinderReference: WeakReference<Binder>? = null
     private var hookCheckCompleted: Boolean = false
     private var statusCheckInFlight: Boolean = false
-    private var statusCheckThread: Thread? = null
+    private var statusTimeoutRunnable: Runnable? = null
+    private var activeStatusCheckToken: String? = null
+    private val mainHandler = Handler(Looper.getMainLooper())
     private lateinit var statusReceiver: StatusBroadcastReceiver
     private lateinit var configStatusReceiver: BroadcastReceiver
     private lateinit var appliedConfigReceiver: BroadcastReceiver
@@ -113,13 +118,19 @@ class MainActivity : ComponentActivity() {
     private val hookStatusProbe by lazy {
         HookStatusProbe(
             context = this,
-            onTimeout = {
+            onTimeout = { token ->
+                if (token != activeStatusCheckToken) {
+                    Log.d("FuseHide", "ignore stale timeout token=$token active=$activeStatusCheckToken")
+                    return@HookStatusProbe
+                }
                 statusBinderReference = null
+                statusTimeoutRunnable = null
+                activeStatusCheckToken = null
                 onHookCheckTimeout()
             },
-            onStarted = { binderReference, statusThread ->
+            onStarted = { binderReference, timeoutRunnable ->
                 statusBinderReference = binderReference
-                statusCheckThread = statusThread
+                statusTimeoutRunnable = timeoutRunnable
             },
         )
     }
@@ -287,9 +298,27 @@ class MainActivity : ComponentActivity() {
     fun onHookStatusReceived(packageName: String, pid: Int) {
         hookedPackage = packageName
         hookedPid = pid
-        statusCheckThread?.interrupt()
+        statusTimeoutRunnable?.let { mainHandler.removeCallbacks(it) }
+        statusTimeoutRunnable = null
+        activeStatusCheckToken = null
         hookCheckCompleted = true
         updateStatusText()
+    }
+
+    fun handleHookStatusIntent(intent: Intent) {
+        val token = intent.getStringExtra(HookStatusProbe.EXTRA_STATUS_QUERY_TOKEN)
+        if (token == null || token != activeStatusCheckToken) {
+            Log.d("FuseHide", "ignore stale status token=$token active=$activeStatusCheckToken")
+            return
+        }
+        val pendingIntent = if (Build.VERSION.SDK_INT >= 33) {
+            intent.getParcelableExtra("EXTRA_PENDING_INTENT", PendingIntent::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            intent.getParcelableExtra("EXTRA_PENDING_INTENT")
+        }
+        val creatorPackage = pendingIntent?.creatorPackage ?: return
+        onHookStatusReceived(creatorPackage, intent.getIntExtra("EXTRA_PID", -1))
     }
 
     private fun appendInfo() {
@@ -316,25 +345,29 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun startStatusCheck() {
-        if (statusCheckInFlight) return
+        if (statusCheckInFlight) {
+            Log.d("FuseHide", "status check already in flight, ignore duplicate request")
+            return
+        }
 
+        val requestToken = UUID.randomUUID().toString()
         hookedPackage = null
         hookedPid = -1
         hookCheckCompleted = false
-        updateStatusText()
+        activeStatusCheckToken = requestToken
         statusCheckInFlight = true
-        hookStatusProbe.start()
+        updateStatusText()
+        hookStatusProbe.start(requestToken)
     }
 
     fun updateStatusText() {
-        statusCheckInFlight = false
-        statusCheckThread = null
         Log.d("FuseHide", "updateStatusText hookedPackage=$hookedPackage hookCheckCompleted=$hookCheckCompleted pid=$hookedPid")
         statusText = when {
             hookedPackage != null -> getString(R.string.status_hooked, hookedPackage, hookedPid) + "\n"
             hookCheckCompleted -> getString(R.string.status_not_hooked) + "\n"
             else -> getString(R.string.status_checking) + "\n"
         }
+        statusCheckInFlight = !hookCheckCompleted && hookedPackage == null
         logUiText(statusText)
     }
 
@@ -509,6 +542,6 @@ class MainActivity : ComponentActivity() {
         unregisterReceiver(statusReceiver)
         unregisterReceiver(configStatusReceiver)
         unregisterReceiver(appliedConfigReceiver)
-        statusCheckThread?.interrupt()
+        statusTimeoutRunnable?.let { mainHandler.removeCallbacks(it) }
     }
 }
