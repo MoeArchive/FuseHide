@@ -31,6 +31,8 @@ inline constexpr std::string_view kIsAppAccessiblePathSymbols[] = {
     "traitsIcEENS3_9allocatorIcEEEEj",
     "_ZN13mediaprovider4fuseL22is_app_accessible_pathEP4fuseRKNSt3__112basic_stringIcNS3_11char_"
     "traitsIcEENS3_9allocatorIcEEEEj",
+    "_ZN13mediaprovider4fuseL22is_app_accessible_pathEPNS0_20MediaProviderWrapperERKNSt6__"
+    "ndk112basic_stringIcNS3_11char_traitsIcEENS3_9allocatorIcEEEEj",
 };
 
 inline constexpr std::string_view kIsPackageOwnedPathSymbols[] = {

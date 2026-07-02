@@ -283,6 +283,10 @@ std::optional<uintptr_t> ResolveFirstAvailableSymbolOffset(const ModuleInfo& mod
         auto resolved = useRuntimeElf ? ResolveTargetSymbolRuntime(module, symbol)
                                       : ResolveTargetSymbol(module, symbol);
         if (resolved.has_value()) {
+            DebugLogPrint(4, "resolved exact symbol=%s offset=0x%zx target=%p path=%s runtime=%d",
+                          std::string(symbol).c_str(),
+                          static_cast<size_t>(reinterpret_cast<uintptr_t>(*resolved) - module.base),
+                          *resolved, module.path.c_str(), useRuntimeElf ? 1 : 0);
             return reinterpret_cast<uintptr_t>(*resolved) - module.base;
         }
     }
@@ -339,6 +343,10 @@ std::optional<uintptr_t> ResolveLargestSymbolOffsetContaining(const ModuleInfo& 
     if (!match.has_value()) {
         return std::nullopt;
     }
+    DebugLogPrint(4, "resolved contains needle=%s picked=%s offset=0x%zx target=%p path=%s",
+                  std::string(needle).c_str(), match->name.c_str(),
+                  static_cast<size_t>(match->value),
+                  reinterpret_cast<void*>(module.base + match->value), module.path.c_str());
     return match->value;
 }
 
@@ -482,6 +490,46 @@ ResolvedHookFeatureOffsets ResolveHookFeatureOffsets(const ModuleInfo& module) {
         module, kPfReaddirPostfilterSymbols, &features.pfReaddirPostfilterSource);
     features.pfReaddirplusOffset =
         ResolveFeatureOffsetBySymbols(module, kPfReaddirplusSymbols, &features.pfReaddirplusSource);
+    if (!features.isAppAccessiblePathOffset.has_value()) {
+        features.isAppAccessiblePathOffset =
+            ResolveFeatureOffsetByContains(module, "is_app_accessible_path", nullptr);
+    }
+    if (!features.pfLookupOffset.has_value()) {
+        features.pfLookupOffset =
+            ResolveFeatureOffsetByContains(module, "pf_lookupEP8fuse_req", nullptr);
+    }
+    if (!features.pfLookupPostfilterOffset.has_value()) {
+        features.pfLookupPostfilterOffset =
+            ResolveFeatureOffsetByContains(module, "pf_lookup_postfilter", nullptr);
+    }
+    if (!features.pfGetattrOffset.has_value()) {
+        features.pfGetattrOffset =
+            ResolveFeatureOffsetByContains(module, "pf_getattrEP8fuse_req", nullptr);
+    }
+    if (!features.pfMkdirOffset.has_value()) {
+        features.pfMkdirOffset =
+            ResolveFeatureOffsetByContains(module, "pf_mkdirEP8fuse_req", nullptr);
+    }
+    if (!features.pfMknodOffset.has_value()) {
+        features.pfMknodOffset =
+            ResolveFeatureOffsetByContains(module, "pf_mknodEP8fuse_req", nullptr);
+    }
+    if (!features.pfUnlinkOffset.has_value()) {
+        features.pfUnlinkOffset =
+            ResolveFeatureOffsetByContains(module, "pf_unlinkEP8fuse_req", nullptr);
+    }
+    if (!features.pfRmdirOffset.has_value()) {
+        features.pfRmdirOffset =
+            ResolveFeatureOffsetByContains(module, "pf_rmdirEP8fuse_req", nullptr);
+    }
+    if (!features.pfRenameOffset.has_value()) {
+        features.pfRenameOffset =
+            ResolveFeatureOffsetByContains(module, "pf_renameEP8fuse_req", nullptr);
+    }
+    if (!features.pfCreateOffset.has_value()) {
+        features.pfCreateOffset =
+            ResolveFeatureOffsetByContains(module, "pf_createEP8fuse_req", nullptr);
+    }
     if (!features.shouldNotCacheOffset.has_value()) {
         features.shouldNotCacheOffset = ResolveFeatureOffsetByContains(
             module, "ShouldNotCache", &features.shouldNotCacheSource);
@@ -948,6 +996,8 @@ bool TryInstallFileInlineHook(const ModuleInfo& module, std::string_view symbolN
         __android_log_print(3, kLogTag, "resolve failed %s", std::string(symbolName).c_str());
         return false;
     }
+    DebugLogPrint(4, "install file inline symbol=%s target=%p replacement=%p path=%s",
+                  std::string(symbolName).c_str(), *target, replacement, module.path.c_str());
     return TryInstallInlineHookAt(*target, replacement, backup, failureMessage);
 }
 
@@ -959,6 +1009,8 @@ bool TryInstallRuntimeInlineHook(const ModuleInfo& module, std::string_view symb
                             std::string(symbolName).c_str());
         return false;
     }
+    DebugLogPrint(4, "install runtime inline symbol=%s target=%p replacement=%p path=%s",
+                  std::string(symbolName).c_str(), *target, replacement, module.path.c_str());
     return TryInstallInlineHookAt(*target, replacement, backup, failureMessage);
 }
 
