@@ -31,6 +31,8 @@ inline constexpr std::string_view kIsAppAccessiblePathSymbols[] = {
     "traitsIcEENS3_9allocatorIcEEEEj",
     "_ZN13mediaprovider4fuseL22is_app_accessible_pathEP4fuseRKNSt3__112basic_stringIcNS3_11char_"
     "traitsIcEENS3_9allocatorIcEEEEj",
+    "_ZN13mediaprovider4fuseL22is_app_accessible_pathEPNS0_20MediaProviderWrapperERKNSt6__"
+    "ndk112basic_stringIcNS3_11char_traitsIcEENS3_9allocatorIcEEEEj",
 };
 
 inline constexpr std::string_view kIsPackageOwnedPathSymbols[] = {
@@ -121,14 +123,17 @@ inline constexpr std::string_view kPfCreateSymbols[] = {
 
 inline constexpr std::string_view kPfReaddirSymbols[] = {
     "_ZN13mediaprovider4fuseL10pf_readdirEP8fuse_reqmmP14fuse_file_info",
+    "_ZN13mediaprovider4fuseL10pf_readdirEP8fuse_reqmmlP14fuse_file_info",
 };
 
 inline constexpr std::string_view kPfReaddirPostfilterSymbols[] = {
     "_ZN13mediaprovider4fuseL21pf_readdir_postfilterEP8fuse_reqmjPKcPKvP14fuse_file_info",
+    "_ZN13mediaprovider4fuseL21pf_readdir_postfilterEP8fuse_reqmjllmPKvP14fuse_file_info",
 };
 
 inline constexpr std::string_view kPfReaddirplusSymbols[] = {
     "_ZN13mediaprovider4fuseL14pf_readdirplusEP8fuse_reqmmP14fuse_file_info",
+    "_ZN13mediaprovider4fuseL14pf_readdirplusEP8fuse_reqmmlP14fuse_file_info",
 };
 
 #if defined(__LP64__)
