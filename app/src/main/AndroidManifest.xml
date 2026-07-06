@@ -29,7 +29,7 @@
 
         <provider
             android:name="io.github.xiaotong6666.fusehide.config.HideConfigProvider"
-            android:authorities="io.github.xiaotong6666.fusehide.hideconfig"
+            android:authorities="${applicationId}.hideconfig"
             android:exported="true" />
 
         <receiver

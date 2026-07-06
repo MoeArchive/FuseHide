@@ -56,9 +56,6 @@ android {
                 cppFlags += listOf("-std=c++20", "-fvisibility=hidden")
             }
         }
-        ndk {
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
-        }
     }
 
     signingConfigs {
@@ -102,6 +99,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     externalNativeBuild {
         cmake {

@@ -61,7 +61,7 @@ class HookStatusProbe(
     }
 
     companion object {
-        private const val APP_PACKAGE = "io.github.xiaotong6666.fusehide"
+        private const val APP_PACKAGE = io.github.xiaotong6666.fusehide.BuildConfig.APPLICATION_ID
         const val ACTION_SET_STATUS = "$APP_PACKAGE.SET_STATUS"
         private const val ACTION_GET_STATUS = "$APP_PACKAGE.GET_STATUS"
         const val EXTRA_STATUS_QUERY_TOKEN = "$APP_PACKAGE.extra.STATUS_QUERY_TOKEN"

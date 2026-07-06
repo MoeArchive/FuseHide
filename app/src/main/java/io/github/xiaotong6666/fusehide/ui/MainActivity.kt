@@ -39,6 +39,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import io.github.xiaotong6666.fusehide.R
 import io.github.xiaotong6666.fusehide.config.HideConfig
 import io.github.xiaotong6666.fusehide.config.HideConfigDefaults
@@ -53,6 +54,8 @@ import io.github.xiaotong6666.fusehide.debug.PathDebugText
 import io.github.xiaotong6666.fusehide.status.HookStatusProbe
 import io.github.xiaotong6666.fusehide.status.StatusBroadcastReceiver
 import io.github.xiaotong6666.fusehide.ui.theme.FuseHideTheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.lang.ref.WeakReference
 import java.util.UUID
 
@@ -364,12 +367,12 @@ class MainActivity :
 
     private fun runAllPkgCheck() {
         outputText = "Scanning all packages... (this may take a while)\n"
-        Thread {
+        lifecycleScope.launch(Dispatchers.IO) {
             val output = PathDebugActions.runAllPkgCheck(packageManager, pathText)
             runOnUiThread {
                 appendOutput(output)
             }
-        }.start()
+        }
     }
 
     private fun insertZwj() {

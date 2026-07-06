@@ -38,7 +38,7 @@ import io.github.xiaotong6666.fusehide.status.StatusBroadcastReceiver;
 import java.lang.reflect.Method;
 
 public class Entry extends XposedModule {
-    private static final String APP_PACKAGE = "io.github.xiaotong6666.fusehide";
+    private static final String APP_PACKAGE = io.github.xiaotong6666.fusehide.BuildConfig.APPLICATION_ID;
     private static final String ACTION_GET_STATUS = APP_PACKAGE + ".GET_STATUS";
     private static final String PACKAGE_MEDIA = "com.android.providers.media.module";
     private static final String PACKAGE_MEDIA_GOOGLE = "com.google.android.providers.media.module";
@@ -134,8 +134,8 @@ public class Entry extends XposedModule {
             } else {
                 applied = HideConfigStore.applyBundleToNative(bundle);
                 if (applied) {
-                    HideConfigStore.saveInjectedProcessSnapshot(application, config, bundleToken);
-                    message = "hide config applied";
+                    applied = HideConfigStore.saveInjectedProcessSnapshot(application, config, bundleToken);
+                    message = applied ? "hide config applied" : "snapshot save failed";
                 } else {
                     message = "apply failed";
                 }
@@ -283,17 +283,25 @@ public class Entry extends XposedModule {
                 public void onReceive(Context context, Intent intent) {
                     final PendingResult pendingResult = goAsync();
                     final String requestedToken = intent.getStringExtra(HideConfigStore.EXTRA_RELOAD_TOKEN);
-                    final android.os.Bundle bundle = HideConfigStore.loadViaProviderBundle(app);
-                    final String providerToken = HideConfigStore.reloadTokenFromBundle(bundle);
-                    final boolean providerTokenMatches = requestedToken != null && requestedToken.equals(providerToken);
-                    if (bundle != null && providerTokenMatches) {
-                        finishConfigReload(app, requestedToken, bundle, "provider", pendingResult);
-                        return;
-                    }
-                    HideConfigStore.requestInjectedProcessConfigBundle(
-                            app,
-                            fallbackBundle -> finishConfigReload(
-                                    app, requestedToken, fallbackBundle, "broadcast_fallback", pendingResult));
+                    new Thread(() -> {
+                                final android.os.Bundle bundle = HideConfigStore.loadViaProviderBundle(app);
+                                final String providerToken = HideConfigStore.reloadTokenFromBundle(bundle);
+                                final boolean providerTokenMatches =
+                                        requestedToken != null && requestedToken.equals(providerToken);
+                                if (bundle != null && providerTokenMatches) {
+                                    finishConfigReload(app, requestedToken, bundle, "provider", pendingResult);
+                                    return;
+                                }
+                                HideConfigStore.requestInjectedProcessConfigBundle(
+                                        app,
+                                        fallbackBundle -> finishConfigReload(
+                                                app,
+                                                requestedToken,
+                                                fallbackBundle,
+                                                "broadcast_fallback",
+                                                pendingResult));
+                            })
+                            .start();
                 }
             };
             IntentFilter configFilter = new IntentFilter(HideConfigStore.ACTION_RELOAD_HIDE_CONFIG);

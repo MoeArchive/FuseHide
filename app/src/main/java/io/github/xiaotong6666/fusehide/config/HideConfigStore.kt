@@ -34,7 +34,7 @@ import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 
 object HideConfigStore {
-    const val APP_PACKAGE: String = "io.github.xiaotong6666.fusehide"
+    const val APP_PACKAGE: String = io.github.xiaotong6666.fusehide.BuildConfig.APPLICATION_ID
     const val PACKAGE_MEDIA: String = "com.android.providers.media.module"
     const val PACKAGE_MEDIA_GOOGLE: String = "com.google.android.providers.media.module"
     const val ACTION_RELOAD_HIDE_CONFIG: String = "io.github.xiaotong6666.fusehide.RELOAD_HIDE_CONFIG"
@@ -53,7 +53,7 @@ object HideConfigStore {
     private const val SNAPSHOT_PREFS_NAME = "hide_config_snapshot"
     private const val SNAPSHOT_VERSION = 1
     private const val METHOD_GET_HIDE_CONFIG = "get_hide_config"
-    private const val AUTHORITY = "io.github.xiaotong6666.fusehide.hideconfig"
+    private const val AUTHORITY = "${io.github.xiaotong6666.fusehide.BuildConfig.APPLICATION_ID}.hideconfig"
     private const val KEY_ENABLE_HIDE_ALL_ROOT_ENTRIES = "enable_hide_all_root_entries"
     private const val KEY_HIDE_ALL_ROOT_ENTRIES_EXEMPTIONS = "hide_all_root_entries_exemptions"
     private const val KEY_HIDDEN_ROOT_ENTRY_NAMES = "hidden_root_entry_names"
@@ -172,9 +172,9 @@ object HideConfigStore {
     }
 
     @JvmStatic
-    fun saveInjectedProcessSnapshot(context: Context, config: HideConfig, reloadToken: String?) {
+    fun saveInjectedProcessSnapshot(context: Context, config: HideConfig, reloadToken: String?): Boolean {
         val snapshotContext = snapshotContext(context)
-        val ok = snapshotContext.getSharedPreferences(SNAPSHOT_PREFS_NAME, Context.MODE_PRIVATE)
+        val saved = snapshotContext.getSharedPreferences(SNAPSHOT_PREFS_NAME, Context.MODE_PRIVATE)
             .edit()
             .putBoolean(KEY_ENABLE_HIDE_ALL_ROOT_ENTRIES, config.enableHideAllRootEntries)
             .putString(
@@ -190,7 +190,12 @@ object HideConfigStore {
             .putString(KEY_RELOAD_TOKEN, reloadToken)
             .putInt(KEY_SNAPSHOT_VERSION, SNAPSHOT_VERSION)
             .commit()
-        Log.d("FuseHide", "save injected snapshot ok=$ok token=$reloadToken")
+        if (saved) {
+            Log.d("FuseHide", "save injected snapshot ok token=$reloadToken")
+        } else {
+            Log.e("FuseHide", "save injected snapshot failed token=$reloadToken")
+        }
+        return saved
     }
 
     @JvmStatic

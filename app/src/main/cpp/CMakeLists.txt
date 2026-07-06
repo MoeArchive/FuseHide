@@ -29,7 +29,40 @@ target_compile_options(
     -Wextra
     -Werror
     -fvisibility=hidden
+    $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>
+    $<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>
 )
+
+target_link_options(
+    fusehide
+    PRIVATE
+    -Wl,--as-needed
+)
+
+if(NOT CMAKE_BUILD_TYPE MATCHES "Debug")
+    target_compile_options(fusehide PRIVATE
+        -Oz
+        -flto=full
+        -ffunction-sections
+        -fdata-sections
+        $<$<COMPILE_LANGUAGE:CXX>:-fno-unwind-tables>
+        $<$<COMPILE_LANGUAGE:CXX>:-fno-asynchronous-unwind-tables>
+        -fno-ident
+        -fno-math-errno
+        -fomit-frame-pointer
+    )
+
+    target_link_options(fusehide PRIVATE
+        -flto=full
+        -Wl,--gc-sections
+        -Wl,--icf=all
+        -Wl,--exclude-libs,ALL
+        -Wl,-s
+        -Wl,--hash-style=gnu
+        -Wl,--build-id=none
+        -Wl,-Bsymbolic
+    )
+endif()
 
 target_include_directories(
     fusehide
