@@ -69,7 +69,6 @@ import top.yukonga.miuix.kmp.basic.NavigationBarItem as MiuixNavigationBarItem
 private data class MainDestinationSpec(
     val destination: MainDestination,
     val title: String,
-    val subtitle: String,
     val icon: ImageVector,
 )
 
@@ -145,10 +144,10 @@ fun MainPage(
 ) {
     val pageSpecs = remember {
         listOf(
-            MainDestinationSpec(MainDestination.Home, "", "", Icons.Outlined.Home),
-            MainDestinationSpec(MainDestination.Config, "", "", Icons.Outlined.Tune),
-            MainDestinationSpec(MainDestination.Probe, "", "", Icons.Outlined.Search),
-            MainDestinationSpec(MainDestination.Settings, "", "", Icons.Outlined.Settings),
+            MainDestinationSpec(MainDestination.Home, "", Icons.Outlined.Home),
+            MainDestinationSpec(MainDestination.Config, "", Icons.Outlined.Tune),
+            MainDestinationSpec(MainDestination.Probe, "", Icons.Outlined.Search),
+            MainDestinationSpec(MainDestination.Settings, "", Icons.Outlined.Settings),
         )
     }.map { spec ->
         spec.copy(
@@ -157,12 +156,6 @@ fun MainPage(
                 MainDestination.Config -> stringResource(R.string.nav_config)
                 MainDestination.Probe -> stringResource(R.string.nav_probe)
                 MainDestination.Settings -> stringResource(R.string.nav_settings)
-            },
-            subtitle = when (spec.destination) {
-                MainDestination.Home -> stringResource(R.string.home_subtitle_runtime)
-                MainDestination.Config -> stringResource(R.string.home_subtitle_policy)
-                MainDestination.Probe -> stringResource(R.string.home_subtitle_probe)
-                MainDestination.Settings -> stringResource(R.string.home_subtitle_settings)
             },
         )
     }
@@ -207,11 +200,9 @@ fun MainPage(
                 modifier = Modifier.fillMaxSize(),
                 topBar = {
                     top.yukonga.miuix.kmp.basic.TopAppBar(
-                        title = stringResource(R.string.app_name),
+                        title = activePage.title,
                         color = MiuixTheme.colorScheme.surface,
                         titleColor = MiuixTheme.colorScheme.onSurface,
-                        subtitle = activePage.subtitle,
-                        subtitleColor = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         scrollBehavior = miuixScrollBehavior,
                     )
                 },
@@ -238,10 +229,10 @@ fun MainPage(
                         .nestedScroll(miuixScrollBehavior.nestedScrollConnection)
 
                     when (page) {
-                        0 -> HomePage(hookStatus = hookStatus, configState = configState, callbacks = homeCallbacks, contentPadding = paddingValues, isCurrentPage = page == pagerState.currentPage, modifier = pageModifier, title = stringResource(R.string.app_name), subtitle = activePage.subtitle)
-                        1 -> ConfigPage(hookStatus = hookStatus, state = configState, callbacks = configCallbacks, contentPadding = paddingValues, isCurrentPage = page == pagerState.currentPage, modifier = pageModifier, title = stringResource(R.string.app_name), subtitle = activePage.subtitle)
-                        2 -> DebugPage(state = debugState, callbacks = debugCallbacks, contentPadding = paddingValues, isCurrentPage = page == pagerState.currentPage, modifier = pageModifier, title = stringResource(R.string.app_name), subtitle = activePage.subtitle)
-                        else -> SettingsPage(state = settingsState, callbacks = settingsCallbacks, contentPadding = paddingValues, isCurrentPage = page == pagerState.currentPage, modifier = pageModifier, title = stringResource(R.string.app_name), subtitle = activePage.subtitle)
+                        0 -> HomePage(hookStatus = hookStatus, configState = configState, callbacks = homeCallbacks, contentPadding = paddingValues, isCurrentPage = page == pagerState.currentPage, modifier = pageModifier)
+                        1 -> ConfigPage(hookStatus = hookStatus, state = configState, callbacks = configCallbacks, contentPadding = paddingValues, isCurrentPage = page == pagerState.currentPage, modifier = pageModifier)
+                        2 -> DebugPage(state = debugState, callbacks = debugCallbacks, contentPadding = paddingValues, isCurrentPage = page == pagerState.currentPage, modifier = pageModifier)
+                        else -> SettingsPage(state = settingsState, callbacks = settingsCallbacks, contentPadding = paddingValues, isCurrentPage = page == pagerState.currentPage, modifier = pageModifier)
                     }
                 }
             }
@@ -255,14 +246,7 @@ fun MainPage(
                     Column {
                         TopAppBar(
                             title = {
-                                Column {
-                                    Text(text = stringResource(R.string.app_name), style = MaterialTheme.typography.headlineSmall)
-                                    Text(
-                                        text = activePage.subtitle,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
+                                Text(text = activePage.title, style = MaterialTheme.typography.headlineSmall)
                             },
                             colors = TopAppBarDefaults.topAppBarColors(
                                 containerColor = MaterialTheme.colorScheme.surface,

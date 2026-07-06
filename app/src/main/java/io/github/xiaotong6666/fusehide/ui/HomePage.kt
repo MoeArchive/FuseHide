@@ -44,8 +44,6 @@ fun HomePage(
     contentPadding: PaddingValues,
     isCurrentPage: Boolean = true,
     modifier: Modifier = Modifier,
-    title: String = stringResource(R.string.app_name),
-    subtitle: String = stringResource(R.string.home_subtitle_runtime),
 ) {
     val resultsNeedAttention = configState.highlightConfigResults || configState.draftVsAppliedDiff.hasDifferences
 

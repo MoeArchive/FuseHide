@@ -51,8 +51,6 @@ fun ConfigPage(
     contentPadding: PaddingValues,
     isCurrentPage: Boolean = true,
     modifier: Modifier = Modifier,
-    title: String = stringResource(R.string.app_name),
-    subtitle: String = stringResource(R.string.home_subtitle_policy),
 ) {
     val view = LocalView.current
     val scrollState = rememberScrollState()

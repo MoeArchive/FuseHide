@@ -1,10 +1,6 @@
 <resources>
     <string name="app_name">FuseHide</string>
     <string name="app_description">Android 12 이상을 대상으로 하는 Xposed 모듈입니다. 실행 중 설정에 따라 MediaProvider에서 일반 저장소 경로를 숨기고 Android/data Unicode 관련 상황의 디버깅 및 수정 기능을 제공합니다.</string>
-    <string name="home_subtitle_runtime">현재 런타임 Hook 상태와 MediaProvider 내부에서 활성화된 구성을 확인합니다.</string>
-    <string name="home_subtitle_policy">런타임 숨김 설정을 조정하고 MediaProvider가 실제로 사용 중인 설정을 확인합니다.</string>
-    <string name="home_subtitle_probe">후킹된 MediaProvider 프로세스에 대해 직접 경로 검사를 실행합니다.</string>
-    <string name="home_subtitle_settings">UI 패밀리를 전환하고 기본 앱 정보를 확인합니다.</string>
     <string name="nav_home">홈</string>
     <string name="nav_config">구성</string>
     <string name="nav_probe">검사</string>

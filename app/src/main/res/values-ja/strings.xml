@@ -1,10 +1,6 @@
 <resources>
     <string name="app_name">FuseHide</string>
     <string name="app_description">Android 12以降向けのXposedモジュールです。実行時設定に基づいてMediaProvider内の通常ストレージパスを非表示にし、Android/dataのUnicode関連ケースに対するデバッグおよび修正機能を提供します。</string>
-    <string name="home_subtitle_runtime">現在のランタイム Hook 状態と MediaProvider 内で有効な設定を確認します。</string>
-    <string name="home_subtitle_policy">実行時の隠蔽設定を調整し、MediaProviderで実際に使われている設定を確認します。</string>
-    <string name="home_subtitle_probe">Hook済みの MediaProvider プロセスに対して直接パス検査を実行します。</string>
-    <string name="home_subtitle_settings">UI ファミリーを切り替え、基本的なアプリ情報を確認します。</string>
     <string name="nav_home">ホーム</string>
     <string name="nav_config">設定</string>
     <string name="nav_probe">検査</string>
