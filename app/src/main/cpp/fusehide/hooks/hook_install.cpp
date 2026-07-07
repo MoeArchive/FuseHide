@@ -945,7 +945,12 @@ void LogCoreHookStatus(const char* stage, const CoreHookStatus& status) {
 }
 
 std::optional<FileElfContext> BuildFileElfContext(const ModuleInfo& module) {
-    auto mapped = MapReadOnlyFile(module.path, module.fileOffset);
+    std::optional<MappedFile> mapped;
+    if (module.path.find("!/") != std::string::npos) {
+        mapped = MapEmbeddedStoredElf(module.path);
+    } else {
+        mapped = MapReadOnlyFile(module.path, module.fileOffset);
+    }
     if (!mapped.has_value()) {
         return std::nullopt;
     }
@@ -1688,16 +1693,19 @@ void InstallFuseHooks() {
     CoreHookStatus coreStatus;
     RefreshCoreHookStatus(*module, &coreStatus);
 
-    if (!useRuntimeElf) {
-        if (auto fileContext = BuildFileElfContext(*module); fileContext.has_value()) {
-            __android_log_print(4, kLogTag, "installing minimal file-backed hook path first");
-            InstallMinimalCoreHooks(*module, *fileContext, &coreStatus);
-            InstallMinimalDebugHooks(*module, *fileContext);
-            LogCoreHookStatus("after minimal", coreStatus);
-        } else {
-            __android_log_print(5, kLogTag,
-                                "minimal file-backed hook path unavailable, falling back");
-        }
+    if (auto fileContext = BuildFileElfContext(*module); fileContext.has_value()) {
+        __android_log_print(4, kLogTag,
+                            useRuntimeElf
+                                ? "installing minimal embedded/file-backed hook path first"
+                                : "installing minimal file-backed hook path first");
+        InstallMinimalCoreHooks(*module, *fileContext, &coreStatus);
+        InstallMinimalDebugHooks(*module, *fileContext);
+        LogCoreHookStatus("after minimal", coreStatus);
+    } else {
+        __android_log_print(5, kLogTag,
+                            useRuntimeElf
+                                ? "minimal embedded/file-backed hook path unavailable, falling back"
+                                : "minimal file-backed hook path unavailable, falling back");
     }
 
     if (!HasAllCoreHooks(coreStatus) || useRuntimeElf) {
