@@ -18,9 +18,11 @@
 
 package io.github.xiaotong6666.fusehide.ui
 
+import android.util.Log
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.MutatePriority
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.pager.HorizontalPager
@@ -41,6 +43,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -138,6 +141,9 @@ fun MainPage(
     debugState: DebugUiState,
     homeCallbacks: HomeCallbacks,
     configCallbacks: ConfigCallbacks,
+    appListViewModel: AppListViewModel,
+    onOpenGlobalConfig: () -> Unit,
+    onOpenAppConfig: (String) -> Unit,
     debugCallbacks: DebugCallbacks,
     settingsState: SettingsUiState,
     settingsCallbacks: SettingsCallbacks,
@@ -164,6 +170,8 @@ fun MainPage(
     val settledPage = pagerState.settledPage
     val activePageIndex = mainPagerState.selectedPage.coerceIn(0, pageSpecs.lastIndex)
     val activePage = pageSpecs[activePageIndex]
+    val appChromeState = rememberAppChromeState()
+    val chromeSpec = appChromeState.spec
     val miuixScrollBehavior = MiuixScrollBehavior()
     val onPageSelected: (Int) -> Unit = { index ->
         if (mainPagerState.selectedPage != index) {
@@ -172,16 +180,19 @@ fun MainPage(
     }
 
     LaunchedEffect(pagerState.currentPage) {
+        Log.d("FuseHideUi", "main.currentPage=${pagerState.currentPage} settled=${pagerState.settledPage} selectedTab=$selectedTab")
         mainPagerState.syncPage()
     }
 
     LaunchedEffect(settledPage) {
+        Log.d("FuseHideUi", "main.settledPage=$settledPage selectedTab=$selectedTab activePageIndex=$activePageIndex")
         if (selectedTab != settledPage) {
             onTabSelected(settledPage)
         }
     }
 
     LaunchedEffect(selectedTab) {
+        Log.d("FuseHideUi", "main.selectedTab=$selectedTab current=${mainPagerState.selectedPage} settled=${pagerState.settledPage}")
         val coercedTarget = selectedTab.coerceIn(0, pageSpecs.lastIndex)
         if (!mainPagerState.isNavigating && coercedTarget != mainPagerState.selectedPage) {
             mainPagerState.animateToPage(coercedTarget)
@@ -199,40 +210,70 @@ fun MainPage(
             top.yukonga.miuix.kmp.basic.Scaffold(
                 modifier = Modifier.fillMaxSize(),
                 topBar = {
-                    top.yukonga.miuix.kmp.basic.TopAppBar(
-                        title = activePage.title,
-                        color = MiuixTheme.colorScheme.surface,
-                        titleColor = MiuixTheme.colorScheme.onSurface,
-                        scrollBehavior = miuixScrollBehavior,
-                    )
+                    val defaultTopBar: ComposableContent = {
+                        top.yukonga.miuix.kmp.basic.TopAppBar(
+                            title = activePage.title,
+                            color = MiuixTheme.colorScheme.surface,
+                            titleColor = MiuixTheme.colorScheme.onSurface,
+                            actions = {
+                                chromeSpec.miuixActions?.invoke()
+                            },
+                            scrollBehavior = miuixScrollBehavior,
+                        )
+                    }
+                    when {
+                        chromeSpec.miuixTopBar != null -> chromeSpec.miuixTopBar.invoke()
+                        chromeSpec.miuixTopBarWrapper != null -> chromeSpec.miuixTopBarWrapper.invoke(defaultTopBar)
+                        else -> defaultTopBar()
+                    }
                 },
-                bottomBar = {
-                    MiuixNavigationBar {
-                        pageSpecs.forEachIndexed { index, page ->
-                            MiuixNavigationBarItem(
-                                selected = activePageIndex == index,
-                                onClick = { onPageSelected(index) },
-                                icon = page.icon,
-                                label = page.title,
-                            )
+                popupHost = chromeSpec.miuixPopupHost ?: {},
+                bottomBar = if (chromeSpec.hideBottomBar) {
+                    {}
+                } else {
+                    {
+                        MiuixNavigationBar {
+                            pageSpecs.forEachIndexed { index, page ->
+                                MiuixNavigationBarItem(
+                                    selected = activePageIndex == index,
+                                    onClick = { onPageSelected(index) },
+                                    icon = page.icon,
+                                    label = page.title,
+                                )
+                            }
                         }
                     }
                 },
             ) { paddingValues ->
-                HorizontalPager(
-                    state = pagerState,
-                    modifier = Modifier.fillMaxSize(),
-                    overscrollEffect = null,
-                ) { page ->
-                    val pageModifier = Modifier
-                        .then(if (page == pagerState.currentPage) Modifier.overScrollVertical() else Modifier)
-                        .nestedScroll(miuixScrollBehavior.nestedScrollConnection)
+                CompositionLocalProvider(
+                    LocalAppChromeState provides appChromeState,
+                    LocalMiuixNestedScrollConnection provides miuixScrollBehavior.nestedScrollConnection,
+                    LocalMiuixCollapsedFractionProvider provides { miuixScrollBehavior.state.collapsedFraction },
+                ) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        HorizontalPager(
+                            state = pagerState,
+                            modifier = Modifier.fillMaxSize(),
+                            overscrollEffect = null,
+                        ) { page ->
+                            val pageModifier = Modifier
+                                .then(if (page == pagerState.currentPage) Modifier.overScrollVertical() else Modifier)
+                                .then(
+                                    if (chromeSpec.consumeOuterScroll) {
+                                        Modifier
+                                    } else {
+                                        Modifier.nestedScroll(miuixScrollBehavior.nestedScrollConnection)
+                                    },
+                                )
 
-                    when (page) {
-                        0 -> HomePage(hookStatus = hookStatus, configState = configState, callbacks = homeCallbacks, contentPadding = paddingValues, isCurrentPage = page == pagerState.currentPage, modifier = pageModifier)
-                        1 -> ConfigPage(hookStatus = hookStatus, state = configState, callbacks = configCallbacks, contentPadding = paddingValues, isCurrentPage = page == pagerState.currentPage, modifier = pageModifier)
-                        2 -> DebugPage(state = debugState, callbacks = debugCallbacks, contentPadding = paddingValues, isCurrentPage = page == pagerState.currentPage, modifier = pageModifier)
-                        else -> SettingsPage(state = settingsState, callbacks = settingsCallbacks, contentPadding = paddingValues, isCurrentPage = page == pagerState.currentPage, modifier = pageModifier)
+                            when (page) {
+                                0 -> HomePage(hookStatus = hookStatus, configState = configState, callbacks = homeCallbacks, contentPadding = paddingValues, isCurrentPage = page == pagerState.currentPage, modifier = pageModifier)
+                                1 -> ConfigPage(hookStatus = hookStatus, state = configState, callbacks = configCallbacks, contentPadding = paddingValues, isCurrentPage = page == pagerState.currentPage, modifier = pageModifier, appListViewModel = appListViewModel, onOpenGlobalConfig = onOpenGlobalConfig, onOpenAppConfig = onOpenAppConfig)
+                                2 -> DebugPage(state = debugState, callbacks = debugCallbacks, contentPadding = paddingValues, isCurrentPage = page == pagerState.currentPage, modifier = pageModifier)
+                                else -> SettingsPage(state = settingsState, callbacks = settingsCallbacks, contentPadding = paddingValues, isCurrentPage = page == pagerState.currentPage, modifier = pageModifier)
+                            }
+                        }
+                        chromeSpec.overlayContent?.invoke(paddingValues)
                     }
                 }
             }
@@ -241,44 +282,66 @@ fun MainPage(
         UiMode.Material -> {
             val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
             Scaffold(
-                modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
-                topBar = {
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(
+                        if (chromeSpec.consumeOuterScroll) {
+                            Modifier
+                        } else {
+                            Modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
+                        },
+                    ),
+                contentWindowInsets = materialScaffoldEdgeToEdgeInsets(),
+                topBar = chromeSpec.materialTopBar ?: {
                     Column {
                         TopAppBar(
                             title = {
                                 Text(text = activePage.title, style = MaterialTheme.typography.headlineSmall)
+                            },
+                            actions = {
+                                chromeSpec.materialActions?.invoke(this)
                             },
                             colors = TopAppBarDefaults.topAppBarColors(
                                 containerColor = MaterialTheme.colorScheme.surface,
                                 scrolledContainerColor = MaterialTheme.colorScheme.surface,
                             ),
                             scrollBehavior = scrollBehavior,
+                            windowInsets = materialTopBarEdgeToEdgeInsets(),
                         )
                     }
                 },
-                bottomBar = {
-                    NavigationBar {
-                        pageSpecs.forEachIndexed { index, page ->
-                            NavigationBarItem(
-                                selected = activePageIndex == index,
-                                onClick = { onPageSelected(index) },
-                                icon = { Icon(page.icon, contentDescription = page.title) },
-                                label = { Text(page.title) },
-                            )
+                bottomBar = if (chromeSpec.hideBottomBar) {
+                    {}
+                } else {
+                    {
+                        NavigationBar {
+                            pageSpecs.forEachIndexed { index, page ->
+                                NavigationBarItem(
+                                    selected = activePageIndex == index,
+                                    onClick = { onPageSelected(index) },
+                                    icon = { Icon(page.icon, contentDescription = page.title) },
+                                    label = { Text(page.title) },
+                                )
+                            }
                         }
                     }
                 },
             ) { paddingValues ->
-                HorizontalPager(
-                    state = pagerState,
-                    modifier = Modifier.fillMaxSize(),
-                    overscrollEffect = null,
-                ) { page ->
-                    when (page) {
-                        0 -> HomePage(hookStatus = hookStatus, configState = configState, callbacks = homeCallbacks, contentPadding = paddingValues, isCurrentPage = page == pagerState.currentPage)
-                        1 -> ConfigPage(hookStatus = hookStatus, state = configState, callbacks = configCallbacks, contentPadding = paddingValues, isCurrentPage = page == pagerState.currentPage)
-                        2 -> DebugPage(state = debugState, callbacks = debugCallbacks, contentPadding = paddingValues, isCurrentPage = page == pagerState.currentPage)
-                        else -> SettingsPage(state = settingsState, callbacks = settingsCallbacks, contentPadding = paddingValues, isCurrentPage = page == pagerState.currentPage)
+                CompositionLocalProvider(LocalAppChromeState provides appChromeState) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        HorizontalPager(
+                            state = pagerState,
+                            modifier = Modifier.fillMaxSize(),
+                            overscrollEffect = null,
+                        ) { page ->
+                            when (page) {
+                                0 -> HomePage(hookStatus = hookStatus, configState = configState, callbacks = homeCallbacks, contentPadding = paddingValues, isCurrentPage = page == pagerState.currentPage)
+                                1 -> ConfigPage(hookStatus = hookStatus, state = configState, callbacks = configCallbacks, contentPadding = paddingValues, isCurrentPage = page == pagerState.currentPage, appListViewModel = appListViewModel, onOpenGlobalConfig = onOpenGlobalConfig, onOpenAppConfig = onOpenAppConfig)
+                                2 -> DebugPage(state = debugState, callbacks = debugCallbacks, contentPadding = paddingValues, isCurrentPage = page == pagerState.currentPage)
+                                else -> SettingsPage(state = settingsState, callbacks = settingsCallbacks, contentPadding = paddingValues, isCurrentPage = page == pagerState.currentPage)
+                            }
+                        }
+                        chromeSpec.overlayContent?.invoke(paddingValues)
                     }
                 }
             }
@@ -366,10 +429,7 @@ private fun PreviewMainPage() {
                 appliedConfigSnapshotText = "Current native config snapshot...",
                 highlightConfigResults = false,
                 configResultsScrollToken = 0,
-                enableHideAllRootEntries = true,
-                hideAllRootEntriesExemptionsText = "Android\nDCIM\nDocument\nDownload\nMovies\nPictures",
-                hiddenTargetsText = "su\ndaemonsu\n\n[io.github.xiaotong6666.fusehide]\nxinhao\n\n[com.eltavine.duckdetector]\nMT2\nxinhao",
-                hiddenPackagesText = "com.eltavine.duckdetector\nio.github.xiaotong6666.fusehide\nio.github.a13e300.fusefixer",
+                currentHideConfig = io.github.xiaotong6666.fusehide.config.HideConfigDefaults.value,
             ),
             debugState = DebugUiState(
                 pathText = "/storage/emulated/0/Android",
@@ -381,13 +441,13 @@ private fun PreviewMainPage() {
             ),
             configCallbacks = ConfigCallbacks(
                 onStatusClick = {},
-                onEnableHideAllRootEntriesChanged = {},
-                onHideAllRootEntriesExemptionsChanged = {},
-                onHiddenTargetsChanged = {},
-                onHiddenPackagesChanged = {},
+                onConfigUpdate = {},
                 onApplyConfigClick = {},
                 onResetConfigClick = {},
             ),
+            appListViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
+            onOpenGlobalConfig = {},
+            onOpenAppConfig = {},
             debugCallbacks = DebugCallbacks(
                 onStatusClick = {},
                 onPathChanged = {},

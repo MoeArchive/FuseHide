@@ -33,13 +33,26 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
+import androidx.navigation3.runtime.entryProvider
+import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
+import androidx.navigation3.ui.NavDisplay
 import io.github.xiaotong6666.fusehide.BuildConfig
 import io.github.xiaotong6666.fusehide.R
 import io.github.xiaotong6666.fusehide.config.HideConfig
@@ -54,6 +67,10 @@ import io.github.xiaotong6666.fusehide.debug.PathDebugActions
 import io.github.xiaotong6666.fusehide.debug.PathDebugText
 import io.github.xiaotong6666.fusehide.status.HookStatusProbe
 import io.github.xiaotong6666.fusehide.status.StatusBroadcastReceiver
+import io.github.xiaotong6666.fusehide.ui.navigation3.LocalNavigator
+import io.github.xiaotong6666.fusehide.ui.navigation3.Navigator
+import io.github.xiaotong6666.fusehide.ui.navigation3.Route
+import io.github.xiaotong6666.fusehide.ui.navigation3.rememberNavigator
 import io.github.xiaotong6666.fusehide.ui.theme.FuseHideTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -92,16 +109,7 @@ class MainActivity :
     private var defaultSaveExplicitlyRequested: Boolean = false
     private var configResultsScrollToken by mutableIntStateOf(0)
     private var shouldAutoScrollConfigResults by mutableStateOf(false)
-    private var enableHideAllRootEntries by mutableStateOf(HideConfigDefaults.value.enableHideAllRootEntries)
-    private var hideAllRootEntriesExemptionsText by mutableStateOf(
-        HideConfigDefaults.toEditorText(HideConfigDefaults.value.hideAllRootEntriesExemptions),
-    )
-    private var hiddenTargetsText by mutableStateOf(
-        formatHiddenTargetRules(HideConfigDefaults.value),
-    )
-    private var hiddenPackagesText by mutableStateOf(
-        HideConfigDefaults.toEditorText(HideConfigDefaults.value.hiddenPackages),
-    )
+    private var currentHideConfig by mutableStateOf(HideConfigDefaults.value)
     private var pathText by mutableStateOf(PathDebugActions.defaultPath())
     private var pathText2 by mutableStateOf("")
     private var outputText by mutableStateOf("")
@@ -207,7 +215,7 @@ class MainActivity :
                     applyConfigToEditor(config)
                     saveAndReloadHideConfig(getString(R.string.config_recovered_applied) + "\n")
                 }
-                highlightConfigResults = config == null || buildDraftVsAppliedDiff(this@MainActivity, currentHideConfig(), config).hasDifferences
+                highlightConfigResults = config == null || buildDraftVsAppliedDiff(this@MainActivity, currentHideConfig, config).hasDifferences
                 if (shouldAutoScrollConfigResults) {
                     configResultsScrollToken += 1
                     shouldAutoScrollConfigResults = false
@@ -218,30 +226,81 @@ class MainActivity :
         ContextCompat.registerReceiver(this, appliedConfigReceiver, appliedConfigFilter, ContextCompat.RECEIVER_EXPORTED)
 
         setContent {
+            val navigator = rememberNavigator(Route.Main)
             CompositionLocalProvider(LocalUiMode provides uiMode) {
-                FuseHideTheme {
-                    val homeCallbacks = HomeCallbacks(
-                        onStatusClick = {
-                            startStatusCheck()
-                            refreshAppliedConfig()
-                        },
-                    )
-                    MainPage(
-                        selectedTab = selectedTab,
-                        onTabSelected = { selectedTab = it },
-                        hookStatus = hookStatusUiState(),
-                        configState = configUiState(),
-                        debugState = debugUiState(),
-                        homeCallbacks = homeCallbacks,
-                        configCallbacks = configCallbacks(),
-                        debugCallbacks = debugCallbacks(),
-                        settingsState = SettingsUiState(uiMode = uiMode),
-                        settingsCallbacks = SettingsCallbacks(onToggleUiMode = {
-                            val next = if (uiMode == UiMode.Miuix) UiMode.Material else UiMode.Miuix
-                            UiMode.saveToPrefs(this@MainActivity, next)
-                            uiMode = next
-                        }),
-                    )
+                CompositionLocalProvider(LocalNavigator provides navigator) {
+                    FuseHideTheme {
+                        val appListViewModel: AppListViewModel = viewModel()
+                        val homeCallbacks = HomeCallbacks(
+                            onStatusClick = {
+                                startStatusCheck()
+                                refreshAppliedConfig()
+                            },
+                        )
+                        val mainScreenEntry: @Composable () -> Unit = {
+                            MainPage(
+                                selectedTab = selectedTab,
+                                onTabSelected = { selectedTab = it },
+                                hookStatus = hookStatusUiState(),
+                                configState = configUiState(),
+                                debugState = debugUiState(),
+                                homeCallbacks = homeCallbacks,
+                                configCallbacks = configCallbacks(),
+                                appListViewModel = appListViewModel,
+                                onOpenGlobalConfig = { navigator.push(Route.GlobalConfig) },
+                                onOpenAppConfig = { packageName -> navigator.push(Route.AppConfig(packageName)) },
+                                debugCallbacks = debugCallbacks(),
+                                settingsState = SettingsUiState(uiMode = uiMode),
+                                settingsCallbacks = SettingsCallbacks(onToggleUiMode = {
+                                    val next = if (uiMode == UiMode.Miuix) UiMode.Material else UiMode.Miuix
+                                    UiMode.saveToPrefs(this@MainActivity, next)
+                                    uiMode = next
+                                }),
+                            )
+                        }
+
+                        val navDisplay: @Composable () -> Unit = {
+                            NavDisplay(
+                                backStack = navigator.backStack,
+                                entryDecorators = listOf(
+                                    rememberSaveableStateHolderNavEntryDecorator(),
+                                    rememberViewModelStoreNavEntryDecorator(),
+                                ),
+                                onBack = { navigator.pop() },
+                                entryProvider = entryProvider {
+                                    entry<Route.Main> { mainScreenEntry() }
+                                    entry<Route.GlobalConfig> {
+                                        GlobalConfigPage(
+                                            state = configUiState(),
+                                            callbacks = configCallbacks(),
+                                            onBack = { navigator.pop() },
+                                            onSave = ::applyHideConfig,
+                                        )
+                                    }
+                                    entry<Route.AppConfig> { key ->
+                                        AppConfigPage(
+                                            packageName = key.packageName,
+                                            state = configUiState(),
+                                            callbacks = configCallbacks(),
+                                            appListViewModel = appListViewModel,
+                                            onBack = { navigator.pop() },
+                                            onSave = ::applyHideConfig,
+                                        )
+                                    }
+                                },
+                            )
+                        }
+
+                        when (uiMode) {
+                            UiMode.Material -> {
+                                Box(modifier = Modifier.fillMaxSize()) {
+                                    navDisplay()
+                                }
+                            }
+
+                            UiMode.Miuix -> top.yukonga.miuix.kmp.basic.Scaffold { navDisplay() }
+                        }
+                    }
                 }
             }
         }
@@ -375,6 +434,73 @@ class MainActivity :
         }
     }
 
+    @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+    @Composable
+    private fun rootConfigHost(
+        title: String,
+        onBack: () -> Unit,
+        onSave: () -> Unit,
+        content: @Composable (PaddingValues) -> Unit,
+    ) {
+        when (uiMode) {
+            UiMode.Material -> androidx.compose.material3.Scaffold(
+                contentWindowInsets = materialScaffoldEdgeToEdgeInsets(),
+                topBar = {
+                    androidx.compose.material3.TopAppBar(
+                        title = { androidx.compose.material3.Text(title) },
+                        navigationIcon = {
+                            androidx.compose.material3.IconButton(onClick = onBack) {
+                                androidx.compose.material3.Icon(
+                                    Icons.AutoMirrored.Outlined.ArrowBack,
+                                    contentDescription = null,
+                                )
+                            }
+                        },
+                        actions = {
+                            androidx.compose.material3.IconButton(onClick = onSave) {
+                                androidx.compose.material3.Icon(
+                                    Icons.Default.Check,
+                                    contentDescription = null,
+                                )
+                            }
+                        },
+                        windowInsets = materialTopBarEdgeToEdgeInsets(),
+                    )
+                },
+                content = content,
+            )
+
+            UiMode.Miuix -> top.yukonga.miuix.kmp.basic.Scaffold(
+                topBar = {
+                    top.yukonga.miuix.kmp.basic.TopAppBar(
+                        title = title,
+                        color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surface,
+                        titleColor = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurface,
+                        navigationIcon = {
+                            top.yukonga.miuix.kmp.basic.IconButton(onClick = onBack) {
+                                androidx.compose.material3.Icon(
+                                    Icons.AutoMirrored.Outlined.ArrowBack,
+                                    contentDescription = null,
+                                    tint = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurface,
+                                )
+                            }
+                        },
+                        actions = {
+                            top.yukonga.miuix.kmp.basic.IconButton(onClick = onSave) {
+                                androidx.compose.material3.Icon(
+                                    Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurface,
+                                )
+                            }
+                        },
+                    )
+                },
+                content = content,
+            )
+        }
+    }
+
     private fun insertZwj() {
         pathText += "\\u200d"
     }
@@ -393,23 +519,10 @@ class MainActivity :
     }
 
     private fun applyConfigToEditor(config: HideConfig) {
-        enableHideAllRootEntries = config.enableHideAllRootEntries
-        hideAllRootEntriesExemptionsText = HideConfigDefaults.toEditorText(config.hideAllRootEntriesExemptions)
-        hiddenTargetsText = formatHiddenTargetRules(config)
-        hiddenPackagesText = HideConfigDefaults.toEditorText(config.hiddenPackages)
+        currentHideConfig = config
     }
 
-    private fun currentHideConfig(): HideConfig {
-        val parsedTargets = parseHiddenTargetRules(hiddenTargetsText)
-        return HideConfig(
-            enableHideAllRootEntries = enableHideAllRootEntries,
-            hideAllRootEntriesExemptions = HideConfigDefaults.parseEditorText(hideAllRootEntriesExemptionsText),
-            hiddenRootEntryNames = parsedTargets.hiddenRootEntryNames,
-            hiddenRelativePaths = parsedTargets.hiddenRelativePaths,
-            hiddenPackages = HideConfigDefaults.parseEditorText(hiddenPackagesText),
-            packageRules = parsedTargets.packageRules,
-        )
-    }
+    private fun currentHideConfig(): HideConfig = currentHideConfig
 
     private fun hookStatusUiState(): HookStatusUiState = HookStatusUiState(
         infoText = infoText,
@@ -425,14 +538,11 @@ class MainActivity :
         lastAckTokenText = lastAckTokenText,
         lastAckResultText = lastAckResultText,
         lastApplyTimeText = lastApplyTimeText,
-        draftVsAppliedDiff = buildDraftVsAppliedDiff(this, currentHideConfig(), appliedHideConfig),
+        draftVsAppliedDiff = buildDraftVsAppliedDiff(this, currentHideConfig, appliedHideConfig),
         appliedConfigSnapshotText = appliedConfigSnapshotText,
         highlightConfigResults = highlightConfigResults,
         configResultsScrollToken = configResultsScrollToken,
-        enableHideAllRootEntries = enableHideAllRootEntries,
-        hideAllRootEntriesExemptionsText = hideAllRootEntriesExemptionsText,
-        hiddenTargetsText = hiddenTargetsText,
-        hiddenPackagesText = hiddenPackagesText,
+        currentHideConfig = currentHideConfig,
     )
 
     private fun debugUiState(): DebugUiState = DebugUiState(
@@ -443,10 +553,7 @@ class MainActivity :
 
     private fun configCallbacks(): ConfigCallbacks = ConfigCallbacks(
         onStatusClick = ::startStatusCheck,
-        onEnableHideAllRootEntriesChanged = { enableHideAllRootEntries = it },
-        onHideAllRootEntriesExemptionsChanged = { hideAllRootEntriesExemptionsText = it },
-        onHiddenTargetsChanged = { hiddenTargetsText = it },
-        onHiddenPackagesChanged = { hiddenPackagesText = it },
+        onConfigUpdate = { currentHideConfig = it },
         onApplyConfigClick = ::applyHideConfig,
         onResetConfigClick = ::resetHideConfigToDefaults,
     )
@@ -483,7 +590,7 @@ class MainActivity :
         }
         val reloadToken = UUID.randomUUID().toString()
         pendingReloadToken = reloadToken
-        HideConfigStore.save(this, currentHideConfig(), reloadToken)
+        HideConfigStore.save(this, currentHideConfig, reloadToken)
         localConfigMissing = false
         defaultSaveExplicitlyRequested = false
         HideConfigStore.sendReloadBroadcast(this, reloadToken)
@@ -506,7 +613,7 @@ class MainActivity :
     }
 
     private fun refuseMissingLocalDefaultSave(): Boolean {
-        if (!localConfigMissing || currentHideConfig() != HideConfigDefaults.value || defaultSaveExplicitlyRequested) {
+        if (!localConfigMissing || currentHideConfig != HideConfigDefaults.value || defaultSaveExplicitlyRequested) {
             return false
         }
         configStatusText = getString(R.string.config_refuse_default_overwrite) + "\n"

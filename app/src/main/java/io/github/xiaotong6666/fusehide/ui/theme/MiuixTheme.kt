@@ -20,14 +20,26 @@ package io.github.xiaotong6666.fusehide.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.darkColorScheme
 import top.yukonga.miuix.kmp.theme.lightColorScheme
 
 @Composable
 fun MiuixFuseHideTheme(content: @Composable () -> Unit) {
+    val darkTheme = isSystemInDarkTheme()
     MiuixTheme(
-        colors = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme(),
+        colors = if (darkTheme) {
+            darkColorScheme(
+                errorContainer = Color(0xFF310808),
+                onErrorContainer = Color(0xFFF72727),
+            )
+        } else {
+            lightColorScheme(
+                errorContainer = Color(0xFFF8E2E2),
+                onErrorContainer = Color(0xFFF72727),
+            )
+        },
         content = content,
     )
 }

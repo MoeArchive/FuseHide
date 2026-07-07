@@ -102,4 +102,21 @@
     <string name="probe_output_empty">Noch keine Prüfausgabe.</string>
     <string name="value_ui_family_miuix">MIUIX</string>
     <string name="value_ui_family_material">Material 3</string>
+    <string name="home_version">Version</string>
+    <string name="home_system">System</string>
+    <string name="home_kernel">Kernel</string>
+    <string name="home_device_model">Gerät</string>
+    <string name="global_hide_config_title">Globale Versteck-Konfiguration</string>
+    <string name="global_hide_config_desc">Konfigurieren Sie das Ausblenden von Verzeichnissen der ersten Ebene, sichtbare Ausnahmen und globale Ziele.</string>
+    <string name="unsaved_config_changes">Ungespeicherte Konfigurationsänderungen</string>
+    <string name="search_apps_placeholder">Apps suchen…</string>
+    <string name="app_hide_enabled_label">Verstecken aktiviert</string>
+    <string name="enable_hide_title">Verstecken aktivieren</string>
+    <string name="enable_hide_desc">Dateisystemanfragen für diese App abfangen</string>
+    <string name="subdirectory_title">Unterverzeichnisse (leer lassen für globale Ziele)</string>
+    <string name="subdirectory_desc">Geben Sie spezifische versteckte Ziele für diese App ein.</string>
+    <string name="refresh_pulling">Zum Aktualisieren ziehen</string>
+    <string name="refresh_release">Zum Aktualisieren loslassen</string>
+    <string name="refresh_refreshing">Aktualisiere...</string>
+    <string name="refresh_complete">Aktualisierung abgeschlossen</string>
 </resources>

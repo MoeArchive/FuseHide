@@ -67,10 +67,7 @@ data class ConfigUiState(
     val appliedConfigSnapshotText: String,
     val highlightConfigResults: Boolean,
     val configResultsScrollToken: Int,
-    val enableHideAllRootEntries: Boolean,
-    val hideAllRootEntriesExemptionsText: String,
-    val hiddenTargetsText: String,
-    val hiddenPackagesText: String,
+    val currentHideConfig: io.github.xiaotong6666.fusehide.config.HideConfig,
 )
 
 data class DebugUiState(
@@ -81,10 +78,7 @@ data class DebugUiState(
 
 data class ConfigCallbacks(
     val onStatusClick: () -> Unit,
-    val onEnableHideAllRootEntriesChanged: (Boolean) -> Unit,
-    val onHideAllRootEntriesExemptionsChanged: (String) -> Unit,
-    val onHiddenTargetsChanged: (String) -> Unit,
-    val onHiddenPackagesChanged: (String) -> Unit,
+    val onConfigUpdate: (io.github.xiaotong6666.fusehide.config.HideConfig) -> Unit,
     val onApplyConfigClick: () -> Unit,
     val onResetConfigClick: () -> Unit,
 )

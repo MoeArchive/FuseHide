@@ -102,4 +102,21 @@
     <string name="config_recovered_applied">Récupération de l\'éditeur et du stockage local à partir de la configuration MediaProvider actuellement appliquée.</string>
     <string name="value_ui_family_miuix">MIUIX</string>
     <string name="value_ui_family_material">Material 3</string>
+    <string name="home_version">Version</string>
+    <string name="home_system">Système</string>
+    <string name="home_kernel">Noyau</string>
+    <string name="home_device_model">Appareil</string>
+    <string name="global_hide_config_title">Configuration globale de masquage</string>
+    <string name="global_hide_config_desc">Configurer le masquage des répertoires de premier niveau, les exceptions visibles et les cibles globales.</string>
+    <string name="unsaved_config_changes">Modifications de configuration non enregistrées</string>
+    <string name="search_apps_placeholder">Rechercher des applications…</string>
+    <string name="app_hide_enabled_label">Masquage activé</string>
+    <string name="enable_hide_title">Activer le masquage</string>
+    <string name="enable_hide_desc">Intercepter les requêtes du système de fichiers pour cette application</string>
+    <string name="subdirectory_title">Sous-répertoires (laisser vide pour les cibles globales)</string>
+    <string name="subdirectory_desc">Entrez des cibles masquées spécifiques pour cette application.</string>
+    <string name="refresh_pulling">Tirez pour actualiser</string>
+    <string name="refresh_release">Relachez pour actualiser</string>
+    <string name="refresh_refreshing">Actualisation...</string>
+    <string name="refresh_complete">Actualisation terminee</string>
 </resources>

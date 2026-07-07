@@ -92,10 +92,7 @@ private fun SettingsPageContent(
                             stringResource(R.string.value_ui_family_material)
                         },
                     )
-                    when (LocalUiMode.current) {
-                        UiMode.Miuix -> SettingsGroupDividerMiuix()
-                        UiMode.Material -> SettingsGroupDividerMaterial()
-                    }
+                    SettingsGroupDivider()
                     SettingsInfoItem(
                         title = stringResource(R.string.app_name),
                         value = stringResource(R.string.app_description),

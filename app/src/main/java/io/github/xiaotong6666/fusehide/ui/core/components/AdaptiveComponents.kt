@@ -18,10 +18,12 @@
 
 package io.github.xiaotong6666.fusehide.ui
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import io.github.xiaotong6666.fusehide.R
 
 @Composable
@@ -165,6 +167,14 @@ fun SettingsInfoItem(
 }
 
 @Composable
+fun SettingsGroupDivider() {
+    when (LocalUiMode.current) {
+        UiMode.Miuix -> SettingsGroupDividerMiuix()
+        UiMode.Material -> SettingsGroupDividerMaterial()
+    }
+}
+
+@Composable
 fun ActionGrid(actions: List<GridActionItem>) {
     when (LocalUiMode.current) {
         UiMode.Miuix -> ActionGridMiuix(actions)
@@ -177,6 +187,30 @@ fun SectionCard(content: @Composable ColumnScope.() -> Unit) {
     when (LocalUiMode.current) {
         UiMode.Miuix -> SectionCardMiuix(content)
         UiMode.Material -> SectionCardMaterial(content)
+    }
+}
+
+@Composable
+fun WarningBanner(
+    message: String,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+) {
+    when (LocalUiMode.current) {
+        UiMode.Miuix -> WarningBannerMiuix(message, modifier, onClick)
+        UiMode.Material -> WarningBannerMaterial(message, modifier, onClick)
+    }
+}
+
+@Composable
+fun InfoBanner(
+    message: String,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+) {
+    when (LocalUiMode.current) {
+        UiMode.Miuix -> InfoBannerMiuix(message, modifier, onClick)
+        UiMode.Material -> InfoBannerMaterial(message, modifier, onClick)
     }
 }
 

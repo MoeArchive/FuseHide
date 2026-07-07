@@ -102,4 +102,21 @@
     <string name="config_recovered_applied">現在適用されているMediaProviderの設定から、エディターとローカルストレージを復元しました。</string>
     <string name="value_ui_family_miuix">MIUIX</string>
     <string name="value_ui_family_material">Material 3</string>
+    <string name="home_version">バージョン</string>
+    <string name="home_system">システム</string>
+    <string name="home_kernel">カーネル</string>
+    <string name="home_device_model">デバイス</string>
+    <string name="global_hide_config_title">グローバル非表示設定</string>
+    <string name="global_hide_config_desc">第1レベルのディレクトリの非表示、表示する例外、およびグローバルターゲットを構成します。</string>
+    <string name="unsaved_config_changes">未保存の構成の変更</string>
+    <string name="search_apps_placeholder">アプリを検索…</string>
+    <string name="app_hide_enabled_label">非表示有効</string>
+    <string name="enable_hide_title">非表示を有効にする</string>
+    <string name="enable_hide_desc">このアプリのファイルシステムリクエストをインターセプトする</string>
+    <string name="subdirectory_title">サブディレクトリ（グローバルターゲットの場合は空のままにします）</string>
+    <string name="subdirectory_desc">このアプリの特定の非表示ターゲットを入力します。</string>
+    <string name="refresh_pulling">引いて更新</string>
+    <string name="refresh_release">離して更新</string>
+    <string name="refresh_refreshing">更新中...</string>
+    <string name="refresh_complete">更新完了</string>
 </resources>

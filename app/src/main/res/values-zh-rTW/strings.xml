@@ -85,8 +85,24 @@
     <string name="probe_output_empty">目前沒有檢測輸出。</string>
     <string name="config_missing_local">未找到已儲存的本機設定。預設值僅以佔位符顯示；除非您明確恢復預設值，否則不會儲存。</string>
     <string name="config_recovered_applied">從目前應用的 MediaProvider 配置中還原編輯器和本機儲存。</string>
+    <string name="value_ui_family_material">Material 3</string>
     <string name="home_version">版本</string>
     <string name="home_system">系統</string>
     <string name="home_kernel">核心</string>
     <string name="home_device_model">裝置</string>
+
+    <string name="global_hide_config_title">全域隱藏設定</string>
+    <string name="global_hide_config_desc">設定第一層目錄隱藏、可見例外以及全域目標。</string>
+    <string name="unsaved_config_changes">未儲存的設定變更</string>
+    <string name="search_apps_placeholder">搜尋應用程式...</string>
+    <string name="app_hide_enabled_label">已啟用隱藏</string>
+    <string name="enable_hide_title">啟用隱藏</string>
+    <string name="enable_hide_desc">攔截此應用程式的檔案系統請求</string>
+    <string name="subdirectory_title">子目錄 (留空則使用全域隱藏目標)</string>
+    <string name="subdirectory_desc">填寫該應用程式專屬的隱藏目標。</string>
+    <string name="value_ui_family_miuix">MIUIX</string>
+    <string name="refresh_pulling">下拉重新整理</string>
+    <string name="refresh_release">鬆開重新整理</string>
+    <string name="refresh_refreshing">重新整理中...</string>
+    <string name="refresh_complete">重新整理完成</string>
 </resources>
