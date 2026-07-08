@@ -19,8 +19,8 @@
 package io.github.xiaotong6666.fusehide.ui.theme
 
 import androidx.compose.runtime.Composable
-import io.github.xiaotong6666.fusehide.ui.LocalUiMode
-import io.github.xiaotong6666.fusehide.ui.UiMode
+import io.github.xiaotong6666.uihelper.mode.LocalUiMode
+import io.github.xiaotong6666.uihelper.mode.UiMode
 
 @Composable
 fun FuseHideTheme(content: @Composable () -> Unit) {

@@ -16,7 +16,7 @@
 
 @file:Suppress("ktlint:standard:function-naming")
 
-package io.github.xiaotong6666.fusehide.ui
+package io.github.xiaotong6666.fusehide.ui.app
 
 import android.util.Log
 import androidx.compose.animation.core.Animatable
@@ -57,6 +57,30 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import io.github.xiaotong6666.fusehide.R
+import io.github.xiaotong6666.fusehide.ui.core.model.ConfigCallbacks
+import io.github.xiaotong6666.fusehide.ui.core.model.ConfigUiState
+import io.github.xiaotong6666.fusehide.ui.core.model.DebugCallbacks
+import io.github.xiaotong6666.fusehide.ui.core.model.DebugUiState
+import io.github.xiaotong6666.fusehide.ui.core.model.HideConfigDiff
+import io.github.xiaotong6666.fusehide.ui.core.model.HomeCallbacks
+import io.github.xiaotong6666.fusehide.ui.core.model.HookStatusUiState
+import io.github.xiaotong6666.fusehide.ui.core.model.MainDestination
+import io.github.xiaotong6666.fusehide.ui.core.model.SettingsCallbacks
+import io.github.xiaotong6666.fusehide.ui.core.model.SettingsUiState
+import io.github.xiaotong6666.fusehide.ui.feature.config.ConfigPage
+import io.github.xiaotong6666.fusehide.ui.feature.config.applist.AppListViewModel
+import io.github.xiaotong6666.fusehide.ui.feature.debug.DebugPage
+import io.github.xiaotong6666.fusehide.ui.feature.home.HomePage
+import io.github.xiaotong6666.fusehide.ui.feature.settings.SettingsPage
+import io.github.xiaotong6666.uihelper.chrome.ComposableContent
+import io.github.xiaotong6666.uihelper.chrome.LocalAppChromeState
+import io.github.xiaotong6666.uihelper.chrome.LocalMiuixCollapsedFractionProvider
+import io.github.xiaotong6666.uihelper.chrome.LocalMiuixNestedScrollConnection
+import io.github.xiaotong6666.uihelper.chrome.rememberAppChromeState
+import io.github.xiaotong6666.uihelper.material.materialScaffoldEdgeToEdgeInsets
+import io.github.xiaotong6666.uihelper.material.materialTopBarEdgeToEdgeInsets
+import io.github.xiaotong6666.uihelper.mode.LocalUiMode
+import io.github.xiaotong6666.uihelper.mode.UiMode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
@@ -221,9 +245,11 @@ fun MainPage(
                             scrollBehavior = miuixScrollBehavior,
                         )
                     }
+                    val miuixTopBar = chromeSpec.miuixTopBar
+                    val miuixTopBarWrapper = chromeSpec.miuixTopBarWrapper
                     when {
-                        chromeSpec.miuixTopBar != null -> chromeSpec.miuixTopBar.invoke()
-                        chromeSpec.miuixTopBarWrapper != null -> chromeSpec.miuixTopBarWrapper.invoke(defaultTopBar)
+                        miuixTopBar != null -> miuixTopBar()
+                        miuixTopBarWrapper != null -> miuixTopBarWrapper(defaultTopBar)
                         else -> defaultTopBar()
                     }
                 },

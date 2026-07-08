@@ -16,7 +16,7 @@
 
 package io.github.xiaotong6666.fusehide.xposed;
 
-import io.github.xiaotong6666.fusehide.ui.MainActivity;
+import io.github.xiaotong6666.fusehide.ui.app.MainActivity;
 
 public final class MainThreadTask implements Runnable {
     private final int taskKind;

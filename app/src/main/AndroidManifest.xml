@@ -18,7 +18,7 @@
         android:supportsRtl="true"
         android:theme="@style/MainTheme">
         <activity
-            android:name="io.github.xiaotong6666.fusehide.ui.MainActivity"
+            android:name="io.github.xiaotong6666.fusehide.ui.app.MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

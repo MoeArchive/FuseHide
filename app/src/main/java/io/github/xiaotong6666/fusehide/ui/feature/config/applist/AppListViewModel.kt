@@ -14,14 +14,17 @@
  * limitations under the License.
  */
 
-package io.github.xiaotong6666.fusehide.ui
+package io.github.xiaotong6666.fusehide.ui.feature.config.applist
 
 import android.app.Application
 import android.content.pm.PackageManager
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.xiaotong6666.fusehide.R
-import io.github.xiaotong6666.fusehide.ui.SearchStatus.ResultStatus
+import io.github.xiaotong6666.uihelper.components.model.AppInfo
+import io.github.xiaotong6666.uihelper.components.model.GroupedApps
+import io.github.xiaotong6666.uihelper.components.model.SearchStatus
+import io.github.xiaotong6666.uihelper.components.model.SearchStatus.ResultStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow

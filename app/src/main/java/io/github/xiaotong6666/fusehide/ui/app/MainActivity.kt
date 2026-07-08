@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.github.xiaotong6666.fusehide.ui
+package io.github.xiaotong6666.fusehide.ui.app
 
 import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
@@ -34,11 +34,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -60,18 +56,28 @@ import io.github.xiaotong6666.fusehide.config.HideConfigDefaults
 import io.github.xiaotong6666.fusehide.config.HideConfigStore
 import io.github.xiaotong6666.fusehide.config.buildAppliedConfigSnapshot
 import io.github.xiaotong6666.fusehide.config.buildDraftVsAppliedDiff
-import io.github.xiaotong6666.fusehide.config.formatHiddenTargetRules
 import io.github.xiaotong6666.fusehide.config.formatNow
-import io.github.xiaotong6666.fusehide.config.parseHiddenTargetRules
 import io.github.xiaotong6666.fusehide.debug.PathDebugActions
 import io.github.xiaotong6666.fusehide.debug.PathDebugText
 import io.github.xiaotong6666.fusehide.status.HookStatusProbe
 import io.github.xiaotong6666.fusehide.status.StatusBroadcastReceiver
-import io.github.xiaotong6666.fusehide.ui.navigation3.LocalNavigator
-import io.github.xiaotong6666.fusehide.ui.navigation3.Navigator
+import io.github.xiaotong6666.fusehide.ui.core.model.ConfigCallbacks
+import io.github.xiaotong6666.fusehide.ui.core.model.ConfigUiState
+import io.github.xiaotong6666.fusehide.ui.core.model.DebugCallbacks
+import io.github.xiaotong6666.fusehide.ui.core.model.DebugUiState
+import io.github.xiaotong6666.fusehide.ui.core.model.HomeCallbacks
+import io.github.xiaotong6666.fusehide.ui.core.model.HookStatusUiState
+import io.github.xiaotong6666.fusehide.ui.core.model.SettingsCallbacks
+import io.github.xiaotong6666.fusehide.ui.core.model.SettingsUiState
+import io.github.xiaotong6666.fusehide.ui.feature.config.appdetail.AppConfigPage
+import io.github.xiaotong6666.fusehide.ui.feature.config.applist.AppListViewModel
+import io.github.xiaotong6666.fusehide.ui.feature.config.global.GlobalConfigPage
 import io.github.xiaotong6666.fusehide.ui.navigation3.Route
-import io.github.xiaotong6666.fusehide.ui.navigation3.rememberNavigator
 import io.github.xiaotong6666.fusehide.ui.theme.FuseHideTheme
+import io.github.xiaotong6666.uihelper.mode.LocalUiMode
+import io.github.xiaotong6666.uihelper.mode.UiMode
+import io.github.xiaotong6666.uihelper.navigation3.LocalNavigator
+import io.github.xiaotong6666.uihelper.navigation3.rememberNavigator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.lang.ref.WeakReference
@@ -152,7 +158,7 @@ class MainActivity :
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        uiMode = UiMode.fromPrefs(this)
+        uiMode = FuseHideUiModeStore.fromPrefs(this)
         appendInfo()
         val savedConfig = HideConfigStore.loadSavedConfigOrNull(this)
         if (savedConfig == null) {
@@ -254,7 +260,7 @@ class MainActivity :
                                 settingsState = SettingsUiState(uiMode = uiMode),
                                 settingsCallbacks = SettingsCallbacks(onToggleUiMode = {
                                     val next = if (uiMode == UiMode.Miuix) UiMode.Material else UiMode.Miuix
-                                    UiMode.saveToPrefs(this@MainActivity, next)
+                                    FuseHideUiModeStore.saveToPrefs(this@MainActivity, next)
                                     uiMode = next
                                 }),
                             )
@@ -437,73 +443,6 @@ class MainActivity :
             runOnUiThread {
                 appendOutput(output)
             }
-        }
-    }
-
-    @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
-    @Composable
-    private fun rootConfigHost(
-        title: String,
-        onBack: () -> Unit,
-        onSave: () -> Unit,
-        content: @Composable (PaddingValues) -> Unit,
-    ) {
-        when (uiMode) {
-            UiMode.Material -> androidx.compose.material3.Scaffold(
-                contentWindowInsets = materialScaffoldEdgeToEdgeInsets(),
-                topBar = {
-                    androidx.compose.material3.TopAppBar(
-                        title = { androidx.compose.material3.Text(title) },
-                        navigationIcon = {
-                            androidx.compose.material3.IconButton(onClick = onBack) {
-                                androidx.compose.material3.Icon(
-                                    Icons.AutoMirrored.Outlined.ArrowBack,
-                                    contentDescription = null,
-                                )
-                            }
-                        },
-                        actions = {
-                            androidx.compose.material3.IconButton(onClick = onSave) {
-                                androidx.compose.material3.Icon(
-                                    Icons.Default.Check,
-                                    contentDescription = null,
-                                )
-                            }
-                        },
-                        windowInsets = materialTopBarEdgeToEdgeInsets(),
-                    )
-                },
-                content = content,
-            )
-
-            UiMode.Miuix -> top.yukonga.miuix.kmp.basic.Scaffold(
-                topBar = {
-                    top.yukonga.miuix.kmp.basic.TopAppBar(
-                        title = title,
-                        color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surface,
-                        titleColor = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurface,
-                        navigationIcon = {
-                            top.yukonga.miuix.kmp.basic.IconButton(onClick = onBack) {
-                                androidx.compose.material3.Icon(
-                                    Icons.AutoMirrored.Outlined.ArrowBack,
-                                    contentDescription = null,
-                                    tint = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurface,
-                                )
-                            }
-                        },
-                        actions = {
-                            top.yukonga.miuix.kmp.basic.IconButton(onClick = onSave) {
-                                androidx.compose.material3.Icon(
-                                    Icons.Default.Check,
-                                    contentDescription = null,
-                                    tint = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurface,
-                                )
-                            }
-                        },
-                    )
-                },
-                content = content,
-            )
         }
     }
 

@@ -40,4 +40,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "fusehide"
 include(":app")
+include(":uihelper")
 include(":baselineprofile")

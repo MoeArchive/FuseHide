@@ -16,7 +16,7 @@
 
 @file:Suppress("ktlint:standard:function-naming")
 
-package io.github.xiaotong6666.fusehide.ui
+package io.github.xiaotong6666.fusehide.ui.feature.home
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -33,10 +33,19 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.xiaotong6666.fusehide.R
+import io.github.xiaotong6666.fusehide.ui.core.model.ConfigUiState
+import io.github.xiaotong6666.fusehide.ui.core.model.HomeCallbacks
+import io.github.xiaotong6666.fusehide.ui.core.model.HookStatusUiState
+import io.github.xiaotong6666.uihelper.components.DeviceStatusList
+import io.github.xiaotong6666.uihelper.components.RuntimeSummaryCard
+import io.github.xiaotong6666.uihelper.components.SectionCard
+import io.github.xiaotong6666.uihelper.components.SectionDescription
+import io.github.xiaotong6666.uihelper.components.SectionTitle
+import io.github.xiaotong6666.uihelper.components.StatusChip
+import io.github.xiaotong6666.uihelper.components.model.SectionDescriptionStyle
 
 @Composable
 fun HomePage(

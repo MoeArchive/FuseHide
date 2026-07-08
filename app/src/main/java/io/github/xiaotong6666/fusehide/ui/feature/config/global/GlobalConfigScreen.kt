@@ -16,7 +16,7 @@
 
 @file:Suppress("ktlint:standard:function-naming")
 
-package io.github.xiaotong6666.fusehide.ui
+package io.github.xiaotong6666.fusehide.ui.feature.config.global
 
 import android.view.HapticFeedbackConstants
 import androidx.compose.runtime.Composable
@@ -27,9 +27,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import io.github.xiaotong6666.fusehide.R
-import io.github.xiaotong6666.fusehide.config.HideConfigDefaults
-import io.github.xiaotong6666.fusehide.config.formatHiddenTargetRules
-import io.github.xiaotong6666.fusehide.config.parseHiddenTargetRules
+import io.github.xiaotong6666.fusehide.ui.adapter.defaultGlobalConfigDrafts
+import io.github.xiaotong6666.fusehide.ui.adapter.globalConfigDrafts
+import io.github.xiaotong6666.fusehide.ui.adapter.updatedConfigForHiddenPackages
+import io.github.xiaotong6666.fusehide.ui.adapter.updatedConfigForHiddenTargets
+import io.github.xiaotong6666.fusehide.ui.adapter.updatedConfigForVisibleExemptions
+import io.github.xiaotong6666.fusehide.ui.core.model.ConfigCallbacks
+import io.github.xiaotong6666.fusehide.ui.core.model.ConfigUiState
+import io.github.xiaotong6666.uihelper.components.InfoBanner
+import io.github.xiaotong6666.uihelper.components.configdetail.AppConfigPageScaffold
+import io.github.xiaotong6666.uihelper.components.configdetail.AppConfigTargetsCard
+import io.github.xiaotong6666.uihelper.components.configdetail.AppConfigToggleCard
+import io.github.xiaotong6666.uihelper.components.configdetail.ConfigDetailPageBody
+import io.github.xiaotong6666.uihelper.components.configdetail.ConfigPageOverflowAction
 
 @Composable
 fun GlobalConfigPage(
@@ -39,12 +49,10 @@ fun GlobalConfigPage(
     onSave: () -> Unit,
 ) {
     val view = LocalView.current
-    val visibleExemptionsText = HideConfigDefaults.toEditorText(state.currentHideConfig.hideAllRootEntriesExemptions)
-    var visibleExemptionsDraft by rememberSaveable { mutableStateOf(visibleExemptionsText) }
-    val hiddenTargetsText = formatHiddenTargetRules(state.currentHideConfig)
-    var hiddenTargetsDraft by rememberSaveable { mutableStateOf(hiddenTargetsText) }
-    val hiddenPackagesText = HideConfigDefaults.toEditorText(state.currentHideConfig.hiddenPackages)
-    var hiddenPackagesDraft by rememberSaveable { mutableStateOf(hiddenPackagesText) }
+    val initialDrafts = globalConfigDrafts(state.currentHideConfig)
+    var visibleExemptionsDraft by rememberSaveable { mutableStateOf(initialDrafts.visibleExemptionsText) }
+    var hiddenTargetsDraft by rememberSaveable { mutableStateOf(initialDrafts.hiddenTargetsText) }
+    var hiddenPackagesDraft by rememberSaveable { mutableStateOf(initialDrafts.hiddenPackagesText) }
 
     AppConfigPageScaffold(
         title = stringResource(R.string.global_hide_config_title),
@@ -54,9 +62,10 @@ fun GlobalConfigPage(
             ConfigPageOverflowAction(
                 label = stringResource(R.string.button_restore_defaults),
                 onClick = {
-                    visibleExemptionsDraft = HideConfigDefaults.toEditorText(HideConfigDefaults.value.hideAllRootEntriesExemptions)
-                    hiddenTargetsDraft = formatHiddenTargetRules(HideConfigDefaults.value)
-                    hiddenPackagesDraft = HideConfigDefaults.toEditorText(HideConfigDefaults.value.hiddenPackages)
+                    val defaultDrafts = defaultGlobalConfigDrafts()
+                    visibleExemptionsDraft = defaultDrafts.visibleExemptionsText
+                    hiddenTargetsDraft = defaultDrafts.hiddenTargetsText
+                    hiddenPackagesDraft = defaultDrafts.hiddenPackagesText
                     callbacks.onResetConfigClick()
                 },
             ),
@@ -86,9 +95,7 @@ fun GlobalConfigPage(
                 value = visibleExemptionsDraft,
                 onValueChange = { newValue ->
                     visibleExemptionsDraft = newValue
-                    callbacks.onConfigUpdate(
-                        state.currentHideConfig.copy(hideAllRootEntriesExemptions = HideConfigDefaults.parseEditorText(newValue)),
-                    )
+                    callbacks.onConfigUpdate(updatedConfigForVisibleExemptions(state.currentHideConfig, newValue))
                 },
                 label = stringResource(R.string.field_visible_exemptions),
                 description = stringResource(R.string.field_visible_exemptions_help),
@@ -100,14 +107,7 @@ fun GlobalConfigPage(
                 value = hiddenTargetsDraft,
                 onValueChange = { newValue ->
                     hiddenTargetsDraft = newValue
-                    val parsed = parseHiddenTargetRules(newValue)
-                    callbacks.onConfigUpdate(
-                        state.currentHideConfig.copy(
-                            hiddenRootEntryNames = parsed.hiddenRootEntryNames,
-                            hiddenRelativePaths = parsed.hiddenRelativePaths,
-                            packageRules = parsed.packageRules,
-                        ),
-                    )
+                    callbacks.onConfigUpdate(updatedConfigForHiddenTargets(state.currentHideConfig, newValue))
                 },
                 label = stringResource(R.string.field_hidden_targets),
                 description = stringResource(R.string.field_hidden_targets_help),
@@ -119,11 +119,7 @@ fun GlobalConfigPage(
                 value = hiddenPackagesDraft,
                 onValueChange = { newValue ->
                     hiddenPackagesDraft = newValue
-                    callbacks.onConfigUpdate(
-                        state.currentHideConfig.copy(
-                            hiddenPackages = HideConfigDefaults.parseEditorText(newValue),
-                        ),
-                    )
+                    callbacks.onConfigUpdate(updatedConfigForHiddenPackages(state.currentHideConfig, newValue))
                 },
                 label = stringResource(R.string.field_hidden_package_names),
                 description = stringResource(R.string.field_hidden_package_names_help),

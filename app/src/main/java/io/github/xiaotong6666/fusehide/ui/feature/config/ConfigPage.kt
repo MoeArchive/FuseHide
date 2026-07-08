@@ -16,12 +16,16 @@
 
 @file:Suppress("ktlint:standard:function-naming")
 
-package io.github.xiaotong6666.fusehide.ui
+package io.github.xiaotong6666.fusehide.ui.feature.config
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.viewmodel.compose.viewModel
+import io.github.xiaotong6666.fusehide.ui.core.model.ConfigCallbacks
+import io.github.xiaotong6666.fusehide.ui.core.model.ConfigUiState
+import io.github.xiaotong6666.fusehide.ui.core.model.HookStatusUiState
+import io.github.xiaotong6666.fusehide.ui.feature.config.applist.AppListScreen
+import io.github.xiaotong6666.fusehide.ui.feature.config.applist.AppListViewModel
 
 @Composable
 fun ConfigPage(

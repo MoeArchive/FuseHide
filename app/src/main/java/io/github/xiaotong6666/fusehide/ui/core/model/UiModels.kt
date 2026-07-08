@@ -14,40 +14,15 @@
  * limitations under the License.
  */
 
-package io.github.xiaotong6666.fusehide.ui
+package io.github.xiaotong6666.fusehide.ui.core.model
+
+import io.github.xiaotong6666.uihelper.mode.UiMode
 
 data class HideConfigDiff(
     val hasDifferences: Boolean,
     val summary: String,
     val details: String,
 )
-
-data class GridActionItem(
-    val label: String,
-    val action: () -> Unit,
-    val style: GridActionStyle = GridActionStyle.Outlined,
-    val isError: Boolean = false,
-)
-
-enum class GridActionStyle {
-    Filled,
-    Tonal,
-    Outlined,
-}
-
-enum class SectionTitleStyle {
-    Large,
-    Medium,
-    EmphasizedMedium,
-    Small,
-    Label,
-    Subsection,
-}
-
-enum class SectionDescriptionStyle {
-    Body,
-    Supporting,
-}
 
 data class HookStatusUiState(
     val infoText: String,

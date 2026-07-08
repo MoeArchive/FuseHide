@@ -16,17 +16,15 @@
 
 @file:Suppress("ktlint:standard:function-naming")
 
-package io.github.xiaotong6666.fusehide.ui
+package io.github.xiaotong6666.fusehide.ui.feature.config.appdetail
 
 import android.view.HapticFeedbackConstants
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -34,8 +32,19 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.xiaotong6666.fusehide.R
-import io.github.xiaotong6666.fusehide.config.HideConfigDefaults
-import io.github.xiaotong6666.fusehide.config.PackageHideRule
+import io.github.xiaotong6666.fusehide.ui.adapter.appSpecificTargetsText
+import io.github.xiaotong6666.fusehide.ui.adapter.updatedConfigForPackageRule
+import io.github.xiaotong6666.fusehide.ui.core.model.ConfigCallbacks
+import io.github.xiaotong6666.fusehide.ui.core.model.ConfigUiState
+import io.github.xiaotong6666.fusehide.ui.feature.config.applist.AppListViewModel
+import io.github.xiaotong6666.uihelper.components.configdetail.AppConfigInfoCard
+import io.github.xiaotong6666.uihelper.components.configdetail.AppConfigPageScaffold
+import io.github.xiaotong6666.uihelper.components.configdetail.AppConfigTargetsCard
+import io.github.xiaotong6666.uihelper.components.configdetail.AppConfigToggleCard
+import io.github.xiaotong6666.uihelper.components.configdetail.ConfigDetailPageBody
+import io.github.xiaotong6666.uihelper.components.icon.AppIconImage
+import io.github.xiaotong6666.uihelper.mode.LocalUiMode
+import io.github.xiaotong6666.uihelper.mode.UiMode
 
 @Composable
 fun AppConfigPage(
@@ -55,13 +64,7 @@ fun AppConfigPage(
     val isHiddenSpecifically = specificRule != null
     val isEnabled = isHiddenGlobally || isHiddenSpecifically
 
-    val specificTargetsText = if (specificRule != null) {
-        val rootEntries = specificRule.hiddenRootEntryNames
-        val relativePaths = specificRule.hiddenRelativePaths.map { "|$it" }
-        HideConfigDefaults.toEditorText(rootEntries + relativePaths)
-    } else {
-        ""
-    }
+    val specificTargetsText = appSpecificTargetsText(state.currentHideConfig, packageName)
     var specificTargetsDraft by rememberSaveable(packageName) { mutableStateOf(specificTargetsText) }
     val topBarTitle = appInfo?.label ?: packageName
 
@@ -96,12 +99,13 @@ fun AppConfigPage(
                 description = stringResource(R.string.enable_hide_desc),
                 onToggle = {
                     view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                    updateAppRule(
-                        packageName = packageName,
-                        enabled = !isEnabled,
-                        targetsText = specificTargetsDraft,
-                        currentState = state,
-                        callbacks = callbacks,
+                    callbacks.onConfigUpdate(
+                        updatedConfigForPackageRule(
+                            currentConfig = state.currentHideConfig,
+                            packageName = packageName,
+                            enabled = !isEnabled,
+                            targetsText = specificTargetsDraft,
+                        ),
                     )
                 },
             )
@@ -109,12 +113,13 @@ fun AppConfigPage(
                 value = specificTargetsDraft,
                 onValueChange = { newText ->
                     specificTargetsDraft = newText
-                    updateAppRule(
-                        packageName = packageName,
-                        enabled = isEnabled,
-                        targetsText = newText,
-                        currentState = state,
-                        callbacks = callbacks,
+                    callbacks.onConfigUpdate(
+                        updatedConfigForPackageRule(
+                            currentConfig = state.currentHideConfig,
+                            packageName = packageName,
+                            enabled = isEnabled,
+                            targetsText = newText,
+                        ),
                     )
                 },
                 label = stringResource(R.string.subdirectory_title),
@@ -122,46 +127,4 @@ fun AppConfigPage(
             )
         }
     }
-}
-
-private fun updateAppRule(
-    packageName: String,
-    enabled: Boolean,
-    targetsText: String,
-    currentState: ConfigUiState,
-    callbacks: ConfigCallbacks,
-) {
-    val currentConfig = currentState.currentHideConfig
-    val parsedLines = HideConfigDefaults.parseEditorText(targetsText)
-
-    val newHiddenPackages = currentConfig.hiddenPackages.toMutableList()
-    val newPackageRules = currentConfig.packageRules.toMutableList()
-
-    newHiddenPackages.remove(packageName)
-    newPackageRules.removeAll { it.packageName == packageName }
-
-    if (enabled) {
-        if (parsedLines.isEmpty()) {
-            newHiddenPackages.add(packageName)
-        } else {
-            val relativePaths = parsedLines
-                .filter { it.startsWith("|") || it.contains('/') }
-                .map { it.removePrefix("|") }
-            val rootEntries = parsedLines.filterNot { it.startsWith("|") || it.contains('/') }
-            newPackageRules.add(
-                PackageHideRule(
-                    packageName = packageName,
-                    hiddenRootEntryNames = rootEntries,
-                    hiddenRelativePaths = relativePaths,
-                ),
-            )
-        }
-    }
-
-    callbacks.onConfigUpdate(
-        currentConfig.copy(
-            hiddenPackages = newHiddenPackages,
-            packageRules = newPackageRules,
-        ),
-    )
 }

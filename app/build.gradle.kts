@@ -112,6 +112,14 @@ android {
         compose = true
         buildConfig = true
     }
+    sourceSets {
+        getByName("main") {
+            java.directories.clear()
+            java.directories.add("src/main/java/io/github/xiaotong6666/fusehide")
+            kotlin.directories.clear()
+            kotlin.directories.add("src/main/java/io/github/xiaotong6666/fusehide")
+        }
+    }
     externalNativeBuild {
         cmake {
             path = file("src/main/cpp/CMakeLists.txt")
@@ -126,6 +134,7 @@ android {
 
 dependencies {
     compileOnly(libs.api)
+    implementation(project(path = ":uihelper"))
     implementation(libs.miuix)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.extended)
@@ -149,5 +158,5 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     implementation(libs.androidx.profileinstaller)
-    "baselineProfile"(project(":baselineprofile"))
+    add("baselineProfile", project(path = ":baselineprofile"))
 }

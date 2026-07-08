@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-package io.github.xiaotong6666.fusehide.ui
+package io.github.xiaotong6666.fusehide.ui.feature.config.applist
 
+import io.github.xiaotong6666.uihelper.components.model.SearchStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job

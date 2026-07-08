@@ -16,7 +16,7 @@
 
 @file:Suppress("ktlint:standard:function-naming")
 
-package io.github.xiaotong6666.fusehide.ui
+package io.github.xiaotong6666.fusehide.ui.feature.config.applist
 
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -37,10 +37,8 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
-import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -63,11 +61,27 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.xiaotong6666.fusehide.R
-import top.yukonga.miuix.kmp.basic.Card
+import io.github.xiaotong6666.fusehide.ui.core.model.ConfigCallbacks
+import io.github.xiaotong6666.fusehide.ui.core.model.ConfigUiState
+import io.github.xiaotong6666.uihelper.chrome.AppChromeSpec
+import io.github.xiaotong6666.uihelper.chrome.LocalMiuixCollapsedFractionProvider
+import io.github.xiaotong6666.uihelper.chrome.LocalMiuixNestedScrollConnection
+import io.github.xiaotong6666.uihelper.chrome.PageChrome
+import io.github.xiaotong6666.uihelper.components.WarningBanner
+import io.github.xiaotong6666.uihelper.components.material.AppListGroupMaterial
+import io.github.xiaotong6666.uihelper.components.material.AppListSearchFieldMaterial
+import io.github.xiaotong6666.uihelper.components.material.SegmentedItem
+import io.github.xiaotong6666.uihelper.components.miuix.AppListGroupMiuix
+import io.github.xiaotong6666.uihelper.components.miuix.AppListSearchFieldMiuix
+import io.github.xiaotong6666.uihelper.components.miuix.AppListSearchPopupMiuix
+import io.github.xiaotong6666.uihelper.components.miuix.SearchBox
+import io.github.xiaotong6666.uihelper.components.model.GroupedApps
+import io.github.xiaotong6666.uihelper.components.model.SearchStatus
+import io.github.xiaotong6666.uihelper.mode.LocalUiMode
+import io.github.xiaotong6666.uihelper.mode.UiMode
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.PullToRefresh
-import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.rememberPullToRefreshState
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
@@ -201,6 +215,7 @@ private fun AppListScreenMaterialUnified(
                     localSearchText = ""
                     onClearSearch()
                 },
+                placeholder = stringResource(R.string.search_apps_placeholder),
             )
         }
         PullToRefreshBox(
@@ -232,6 +247,7 @@ private fun AppListScreenMaterialUnified(
                             AppListGroupMaterial(
                                 group = group,
                                 hiddenPackages = hiddenPackages,
+                                enabledLabel = stringResource(R.string.app_hide_enabled_label),
                                 expanded = group.apps.size > 1,
                                 onToggleExpand = {},
                                 onOpenApp = onNavigateToAppConfig,
@@ -256,6 +272,7 @@ private fun AppListScreenMaterialUnified(
                             AppListGroupMaterial(
                                 group = group,
                                 hiddenPackages = hiddenPackages,
+                                enabledLabel = stringResource(R.string.app_hide_enabled_label),
                                 expanded = expanded,
                                 onToggleExpand = {
                                     if (group.apps.size > 1) {
@@ -323,6 +340,7 @@ private fun AppListScreenMiuixUnified(
                     searchStatus = searchStatus,
                     searchResults = orderedSearchResults,
                     hiddenPackages = hiddenPackages,
+                    enabledLabel = stringResource(R.string.app_hide_enabled_label),
                     dynamicTopPadding = dynamicTopPadding,
                     bottomInnerPadding = bottomInnerPadding,
                     onSearchStatusChange = onSearchStatusChange,
@@ -431,6 +449,7 @@ private fun AppListScreenMiuixUnified(
                             AppListGroupMiuix(
                                 group = group,
                                 hiddenPackages = hiddenPackages,
+                                enabledLabel = stringResource(R.string.app_hide_enabled_label),
                                 expanded = expanded,
                                 onToggleExpand = {
                                     if (group.apps.size > 1) {
