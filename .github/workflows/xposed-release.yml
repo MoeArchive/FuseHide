@@ -82,6 +82,26 @@ jobs:
 
           test -f "$RELEASE_APK"
 
+          TARGET_BRANCH="$(gh repo view "$TARGET_REPO" --json defaultBranchRef --jq '.defaultBranchRef.name')"
+          test -n "$TARGET_BRANCH"
+
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --global url."https://x-access-token:${GH_TOKEN}@github.com/".insteadOf "https://github.com/"
+
+          git clone --depth 1 --branch "$TARGET_BRANCH" "https://github.com/${TARGET_REPO}.git" community-repo
+
+          pushd community-repo >/dev/null
+          if git ls-remote --exit-code --tags origin "refs/tags/${COMMUNITY_TAG}" >/dev/null 2>&1; then
+            echo "Community tag ${COMMUNITY_TAG} already exists, keep existing target."
+          else
+            git commit --allow-empty -m "release: ${VERSION_NAME}"
+            git push origin "HEAD:${TARGET_BRANCH}"
+            git tag "$COMMUNITY_TAG"
+            git push origin "refs/tags/${COMMUNITY_TAG}"
+          fi
+          popd >/dev/null
+
           {
             echo "同步自 [主仓库](${MAIN_REPO_URL}) 构建产物喵"
             echo
