@@ -21,17 +21,19 @@ package io.github.xiaotong6666.uihelper.components.material
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LargeTopAppBar
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
+import io.github.xiaotong6666.uihelper.material.expressiveTopAppBarColors
 import io.github.xiaotong6666.uihelper.material.materialTopBarEdgeToEdgeInsets
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun AppListTopBarMaterial(
     title: String,
@@ -39,11 +41,17 @@ fun AppListTopBarMaterial(
     scrollBehavior: TopAppBarScrollBehavior,
     actionContentDescription: String,
 ) {
-    LargeTopAppBar(
+    LargeFlexibleTopAppBar(
         title = { Text(title) },
         navigationIcon = {},
         actions = {
-            IconButton(onClick = onNavigateToGlobalConfig) {
+            IconButton(
+                onClick = onNavigateToGlobalConfig,
+                colors = IconButtonDefaults.iconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                ),
+            ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
                     contentDescription = actionContentDescription,
@@ -51,10 +59,7 @@ fun AppListTopBarMaterial(
             }
         },
         scrollBehavior = scrollBehavior,
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-            scrolledContainerColor = MaterialTheme.colorScheme.surface,
-        ),
+        colors = expressiveTopAppBarColors(),
         windowInsets = materialTopBarEdgeToEdgeInsets(),
     )
 }

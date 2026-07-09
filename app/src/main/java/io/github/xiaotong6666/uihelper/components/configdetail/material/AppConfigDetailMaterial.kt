@@ -18,6 +18,7 @@
 
 package io.github.xiaotong6666.uihelper.components.configdetail.material
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,13 +39,12 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LargeTopAppBar
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
@@ -55,6 +55,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -62,11 +63,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.xiaotong6666.uihelper.components.StatusTag
 import io.github.xiaotong6666.uihelper.components.configdetail.ConfigPageOverflowAction
+import io.github.xiaotong6666.uihelper.components.material.ExpressiveSwitchMaterial
+import io.github.xiaotong6666.uihelper.material.ExpressiveScaffold
 import io.github.xiaotong6666.uihelper.material.expressiveTopAppBarColors
 import io.github.xiaotong6666.uihelper.material.materialScaffoldEdgeToEdgeInsets
 import io.github.xiaotong6666.uihelper.material.materialTopBarEdgeToEdgeInsets
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun AppConfigPageScaffoldMaterial(
     title: String,
@@ -77,20 +80,32 @@ fun AppConfigPageScaffoldMaterial(
 ) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     var showOverflowMenu by remember { mutableStateOf(false) }
-    Scaffold(
+    ExpressiveScaffold(
         contentWindowInsets = materialScaffoldEdgeToEdgeInsets(),
         topBar = {
-            LargeTopAppBar(
+            LargeFlexibleTopAppBar(
                 title = { Text(text = title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(
+                        onClick = onBack,
+                        colors = IconButtonDefaults.iconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        ),
+                    ) {
                         Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = null)
                     }
                 },
                 actions = {
                     if (overflowActions.isNotEmpty()) {
                         Box {
-                            IconButton(onClick = { showOverflowMenu = true }) {
+                            IconButton(
+                                onClick = { showOverflowMenu = true },
+                                colors = IconButtonDefaults.iconButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                ),
+                            ) {
                                 Icon(Icons.Default.MoreVert, contentDescription = null)
                             }
                             DropdownMenu(
@@ -109,14 +124,17 @@ fun AppConfigPageScaffoldMaterial(
                             }
                         }
                     }
-                    IconButton(onClick = onSave) {
+                    IconButton(
+                        onClick = onSave,
+                        colors = IconButtonDefaults.iconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        ),
+                    ) {
                         Icon(Icons.Default.Check, contentDescription = null)
                     }
                 },
-                colors = expressiveTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    scrolledContainerColor = MaterialTheme.colorScheme.surface,
-                ),
+                colors = expressiveTopAppBarColors(),
                 windowInsets = materialTopBarEdgeToEdgeInsets(),
                 scrollBehavior = scrollBehavior,
             )
@@ -161,7 +179,7 @@ fun AppConfigInfoCardMaterial(
     val appId = if (uid >= 0) uid % 100000 else -1
     Card(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceBright),
         shape = MaterialTheme.shapes.large,
     ) {
         Row(
@@ -226,7 +244,7 @@ fun AppConfigToggleCardMaterial(
     Card(
         modifier = modifier.fillMaxWidth(),
         onClick = onToggle,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        colors = CardDefaults.cardColors(containerColor = if (checked) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceBright),
         shape = MaterialTheme.shapes.large,
     ) {
         Row(
@@ -238,11 +256,10 @@ fun AppConfigToggleCardMaterial(
                 Text(text = title, style = MaterialTheme.typography.titleMedium)
                 Text(text = description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Switch(
+            ExpressiveSwitchMaterial(
                 checked = checked,
                 onCheckedChange = null,
                 modifier = Modifier.clearAndSetSemantics {},
-                colors = SwitchDefaults.colors(),
             )
         }
     }
@@ -260,7 +277,7 @@ fun AppConfigTargetsCardMaterial(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceBright),
         shape = MaterialTheme.shapes.large,
     ) {
         Column(
@@ -281,7 +298,10 @@ fun AppConfigTargetsCardMaterial(
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(min = (minLines * 24).dp)
-                            .padding(vertical = 4.dp),
+                            .clip(MaterialTheme.shapes.large)
+                            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                            .padding(vertical = 4.dp)
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
                     ) {
                         innerTextField()
                     }

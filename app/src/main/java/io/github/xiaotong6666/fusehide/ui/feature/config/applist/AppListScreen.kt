@@ -18,58 +18,88 @@
 
 package io.github.xiaotong6666.fusehide.ui.feature.config.applist
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowForward
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.ExpandedFullScreenContainedSearchBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.SearchBar
+import androidx.compose.material3.SearchBarDefaults
+import androidx.compose.material3.SearchBarValue
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.rememberContainedSearchBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.xiaotong6666.fusehide.R
 import io.github.xiaotong6666.fusehide.ui.core.model.ConfigCallbacks
 import io.github.xiaotong6666.fusehide.ui.core.model.ConfigUiState
 import io.github.xiaotong6666.uihelper.chrome.AppChromeSpec
+import io.github.xiaotong6666.uihelper.chrome.LocalMaterialNestedScrollConnection
 import io.github.xiaotong6666.uihelper.chrome.LocalMiuixCollapsedFractionProvider
 import io.github.xiaotong6666.uihelper.chrome.LocalMiuixNestedScrollConnection
 import io.github.xiaotong6666.uihelper.chrome.PageChrome
 import io.github.xiaotong6666.uihelper.components.WarningBanner
 import io.github.xiaotong6666.uihelper.components.material.AppListGroupMaterial
-import io.github.xiaotong6666.uihelper.components.material.AppListSearchFieldMaterial
 import io.github.xiaotong6666.uihelper.components.material.SegmentedItem
 import io.github.xiaotong6666.uihelper.components.miuix.AppListGroupMiuix
 import io.github.xiaotong6666.uihelper.components.miuix.AppListSearchFieldMiuix
@@ -79,6 +109,8 @@ import io.github.xiaotong6666.uihelper.components.model.GroupedApps
 import io.github.xiaotong6666.uihelper.components.model.SearchStatus
 import io.github.xiaotong6666.uihelper.mode.LocalUiMode
 import io.github.xiaotong6666.uihelper.mode.UiMode
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.PullToRefresh
@@ -128,8 +160,7 @@ fun AppListScreen(
             orderedGroups = orderedGroups,
             orderedSearchResults = orderedSearchResults,
             onRefresh = { appListViewModel.loadAppList(force = true) },
-            onSearchTextChange = appListViewModel::updateSearchText,
-            onClearSearch = { appListViewModel.updateSearchText("") },
+            onSearchStatusChange = appListViewModel::updateSearchStatus,
             onNavigateToGlobalConfig = onNavigateToGlobalConfig,
             onNavigateToAppConfig = onNavigateToAppConfig,
             contentPadding = contentPadding,
@@ -163,8 +194,7 @@ private fun AppListScreenMaterialUnified(
     orderedGroups: List<GroupedApps>,
     orderedSearchResults: List<GroupedApps>,
     onRefresh: () -> Unit,
-    onSearchTextChange: (String) -> Unit,
-    onClearSearch: () -> Unit,
+    onSearchStatusChange: (SearchStatus) -> Unit,
     onNavigateToGlobalConfig: () -> Unit,
     onNavigateToAppConfig: (String) -> Unit,
     contentPadding: PaddingValues,
@@ -172,117 +202,266 @@ private fun AppListScreenMaterialUnified(
     bottomInnerPadding: Dp,
 ) {
     val listState = rememberLazyListState()
+    val searchListState = rememberLazyListState()
     val pullToRefreshState = rememberPullToRefreshStateMaterial()
-    var localSearchText by remember { mutableStateOf(uiState.searchStatus.searchText) }
-    LaunchedEffect(uiState.searchStatus.searchText) { localSearchText = uiState.searchStatus.searchText }
-    val density = LocalDensity.current
-    var searchContainerBottom by remember { mutableStateOf(0.dp) }
-    val searchTopPadding = contentPadding.calculateTopPadding() + 12.dp
+    val searchStatus = uiState.searchStatus
+    val sharedNestedScrollConnection = LocalMaterialNestedScrollConnection.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
+    val scaledDensity = LocalDensity.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val scope = rememberCoroutineScope()
+    val searchBarState = rememberContainedSearchBarState()
+    val textFieldState = rememberTextFieldState()
+    val currentQuery = textFieldState.text.toString()
+    val latestSearchText by rememberUpdatedState(searchStatus.searchText)
+    val latestSearchResults = rememberUpdatedState(orderedSearchResults)
+    val latestHiddenPackages = rememberUpdatedState(hiddenPackages)
+    val latestOpenApp = rememberUpdatedState(onNavigateToAppConfig)
+    val isSearchExpanded = searchBarState.currentValue != SearchBarValue.Collapsed || searchBarState.targetValue != SearchBarValue.Collapsed
+    var previousSearchBarValue by remember { mutableStateOf(searchBarState.currentValue) }
+    var shouldClearOnCollapse by remember { mutableStateOf(true) }
+
+    val clearSearchText: () -> Unit = {
+        textFieldState.setTextAndPlaceCursorAtEnd("")
+        onSearchStatusChange(searchStatus.copy(searchText = ""))
+    }
+    val collapseAndClear: () -> Unit = {
+        shouldClearOnCollapse = false
+        clearSearchText()
+        scope.launch { searchBarState.animateToCollapsed() }
+        focusManager.clearFocus()
+        keyboardController?.hide()
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            keyboardController?.hide()
+        }
+    }
+
+    LaunchedEffect(searchStatus.searchText) {
+        val current = textFieldState.text.toString()
+        if (current != searchStatus.searchText) {
+            textFieldState.setTextAndPlaceCursorAtEnd(searchStatus.searchText)
+        }
+    }
+
+    LaunchedEffect(textFieldState, latestSearchText) {
+        snapshotFlow { textFieldState.text.toString() }
+            .distinctUntilChanged()
+            .collect { value ->
+                if (value != latestSearchText) {
+                    onSearchStatusChange(searchStatus.copy(searchText = value))
+                }
+            }
+    }
+
+    LaunchedEffect(searchBarState) {
+        snapshotFlow { searchBarState.currentValue }
+            .distinctUntilChanged()
+            .collect { value ->
+                val collapsedFromExpanded =
+                    previousSearchBarValue != SearchBarValue.Collapsed && value == SearchBarValue.Collapsed
+                previousSearchBarValue = value
+                if (collapsedFromExpanded) {
+                    if (shouldClearOnCollapse) {
+                        clearSearchText()
+                    }
+                    shouldClearOnCollapse = true
+                    focusManager.clearFocus()
+                    keyboardController?.hide()
+                }
+            }
+    }
+
+    BackHandler(isSearchExpanded) {
+        if (isSearchExpanded) {
+            collapseAndClear()
+        }
+    }
+
+    val inputField: @Composable () -> Unit = {
+        CompositionLocalProvider(LocalDensity provides scaledDensity) {
+            SearchBarDefaults.InputField(
+                textFieldState = textFieldState,
+                searchBarState = searchBarState,
+                onSearch = {
+                    focusManager.clearFocus()
+                    keyboardController?.hide()
+                },
+                placeholder = { androidx.compose.material3.Text(stringResource(R.string.search_apps_placeholder)) },
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = ImeAction.Search),
+                leadingIcon = {
+                    if (isSearchExpanded) {
+                        androidx.compose.material3.IconButton(
+                            modifier = Modifier.padding(end = 8.dp),
+                            onClick = { collapseAndClear() },
+                            colors = IconButtonDefaults.iconButtonColors(
+                                containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerHighest,
+                                contentColor = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                            ),
+                        ) {
+                            Icon(Icons.AutoMirrored.Rounded.ArrowBack, null)
+                        }
+                    } else {
+                        Icon(Icons.Filled.Search, null)
+                    }
+                },
+                trailingIcon = {
+                    if (isSearchExpanded && currentQuery.isNotEmpty()) {
+                        androidx.compose.material3.IconButton(onClick = { clearSearchText() }) {
+                            Icon(Icons.Filled.Close, null)
+                        }
+                    }
+                },
+                interactionSource = interactionSource,
+            )
+        }
+    }
 
     PageChrome(
         AppChromeSpec(
             materialActions = {
-                IconButton(onClick = onNavigateToGlobalConfig) {
+                androidx.compose.material3.IconButton(
+                    onClick = onNavigateToGlobalConfig,
+                    colors = IconButtonDefaults.iconButtonColors(
+                        containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerHighest,
+                        contentColor = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                    ),
+                ) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
+                        imageVector = Icons.Default.Settings,
                         contentDescription = stringResource(R.string.global_hide_config_title),
                     )
+                }
+            },
+            overlayContent = {
+                ExpandedFullScreenContainedSearchBar(
+                    state = searchBarState,
+                    inputField = inputField,
+                    windowInsets = { SearchBarDefaults.fullScreenWindowInsets.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal) },
+                ) {
+                    val bottomPadding = SearchBarDefaults.fullScreenWindowInsets.asPaddingValues().calculateBottomPadding()
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        LazyColumn(
+                            state = searchListState,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .then(
+                                    if (sharedNestedScrollConnection != null) {
+                                        Modifier.nestedScroll(sharedNestedScrollConnection)
+                                    } else {
+                                        Modifier
+                                    },
+                                ),
+                            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(2.dp),
+                            contentPadding = PaddingValues(
+                                start = 16.dp,
+                                end = 16.dp,
+                                bottom = 16.dp + bottomPadding,
+                            ),
+                        ) {
+                            itemsIndexed(latestSearchResults.value, key = { _, item -> item.uid }) { index, group ->
+                                SegmentedItem(index = index, count = latestSearchResults.value.size) {
+                                    AppListGroupMaterial(
+                                        group = group,
+                                        hiddenPackages = latestHiddenPackages.value,
+                                        enabledLabel = stringResource(R.string.app_hide_enabled_label),
+                                        expanded = group.apps.size > 1,
+                                        onToggleExpand = {},
+                                        onOpenApp = {
+                                            collapseAndClear()
+                                            latestOpenApp.value(it)
+                                        },
+                                        matchedPackageNames = group.matchedPackageNames,
+                                        alwaysShowChildren = true,
+                                    )
+                                }
+                            }
+                        }
+                        Box(
+                            Modifier
+                                .align(Alignment.BottomCenter)
+                                .navigationBarsPadding()
+                                .imePadding()
+                                .padding(bottom = 16.dp),
+                        ) {
+                            androidx.compose.material3.SnackbarHost(hostState = snackbarHostState)
+                        }
+                    }
                 }
             },
         ),
         enabled = isCurrentPage,
     )
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .padding(top = searchTopPadding, bottom = 12.dp)
-                .onGloballyPositioned { coordinates ->
-                    with(density) {
-                        searchContainerBottom = coordinates.positionInParent().y.toDp() + coordinates.size.height.toDp() + 2.dp
-                    }
-                },
-        ) {
-            AppListSearchFieldMaterial(
-                value = localSearchText,
-                onValueChange = {
-                    localSearchText = it
-                    onSearchTextChange(it)
-                },
-                onClearClick = {
-                    localSearchText = ""
-                    onClearSearch()
-                },
-                placeholder = stringResource(R.string.search_apps_placeholder),
+    PullToRefreshBox(
+        modifier = Modifier.fillMaxSize().padding(top = contentPadding.calculateTopPadding()),
+        isRefreshing = uiState.isRefreshing,
+        onRefresh = onRefresh,
+        state = pullToRefreshState,
+        indicator = {
+            PullToRefreshDefaults.LoadingIndicator(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 74.dp),
+                isRefreshing = uiState.isRefreshing,
+                state = pullToRefreshState,
             )
-        }
-        PullToRefreshBox(
-            modifier = Modifier.fillMaxSize().padding(top = searchContainerBottom),
-            isRefreshing = uiState.isRefreshing,
-            onRefresh = onRefresh,
-            state = pullToRefreshState,
-            indicator = {
-                PullToRefreshDefaults.Indicator(
-                    modifier = Modifier.align(Alignment.TopCenter),
-                    isRefreshing = uiState.isRefreshing,
-                    state = pullToRefreshState,
-                )
-            },
+        },
+    ) {
+        val expandedUids = remember { mutableStateOf(setOf<Int>()) }
+        LazyColumn(
+            state = listState,
+            modifier = Modifier
+                .fillMaxSize()
+                .then(
+                    if (sharedNestedScrollConnection != null) {
+                        Modifier.nestedScroll(sharedNestedScrollConnection)
+                    } else {
+                        Modifier
+                    },
+                ),
+            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(2.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 16.dp + bottomInnerPadding),
         ) {
-            val expandedUids = remember { mutableStateOf(setOf<Int>()) }
-            val isSearching = localSearchText.isNotBlank()
-            LaunchedEffect(isSearching, orderedGroups.size, orderedSearchResults.size, uiState.isRefreshing, searchContainerBottom) {
+            item {
+                SearchBar(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
+                        .padding(bottom = 18.dp),
+                    state = searchBarState,
+                    inputField = inputField,
+                    colors = SearchBarDefaults.colors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerHighest),
+                )
             }
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(2.dp),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 16.dp + bottomInnerPadding),
-            ) {
-                if (isSearching) {
-                    itemsIndexed(orderedSearchResults, key = { _, item -> item.uid }) { index, group ->
-                        SegmentedItem(index = index, count = orderedSearchResults.size) {
-                            AppListGroupMaterial(
-                                group = group,
-                                hiddenPackages = hiddenPackages,
-                                enabledLabel = stringResource(R.string.app_hide_enabled_label),
-                                expanded = group.apps.size > 1,
-                                onToggleExpand = {},
-                                onOpenApp = onNavigateToAppConfig,
-                                matchedPackageNames = group.matchedPackageNames,
-                                alwaysShowChildren = true,
-                            )
-                        }
-                    }
-                } else {
-                    if (hasUnsavedChanges) {
-                        item {
-                            WarningBanner(
-                                message = stringResource(R.string.unsaved_config_changes),
-                                modifier = Modifier.padding(bottom = 10.dp),
-                                onClick = onNavigateToGlobalConfig,
-                            )
-                        }
-                    }
-                    itemsIndexed(orderedGroups, key = { _, item -> item.uid }) { index, group ->
-                        val expanded = expandedUids.value.contains(group.uid)
-                        SegmentedItem(index = index, count = orderedGroups.size) {
-                            AppListGroupMaterial(
-                                group = group,
-                                hiddenPackages = hiddenPackages,
-                                enabledLabel = stringResource(R.string.app_hide_enabled_label),
-                                expanded = expanded,
-                                onToggleExpand = {
-                                    if (group.apps.size > 1) {
-                                        expandedUids.value = if (expanded) expandedUids.value - group.uid else expandedUids.value + group.uid
-                                    }
-                                },
-                                onOpenApp = onNavigateToAppConfig,
-                            )
-                        }
-                    }
+            if (hasUnsavedChanges) {
+                item {
+                    WarningBanner(
+                        message = stringResource(R.string.unsaved_config_changes),
+                        modifier = Modifier.padding(bottom = 10.dp),
+                        onClick = onNavigateToGlobalConfig,
+                    )
+                }
+            }
+            itemsIndexed(orderedGroups, key = { _, item -> item.uid }) { index, group ->
+                val expanded = expandedUids.value.contains(group.uid)
+                SegmentedItem(index = index, count = orderedGroups.size) {
+                    AppListGroupMaterial(
+                        group = group,
+                        hiddenPackages = hiddenPackages,
+                        enabledLabel = stringResource(R.string.app_hide_enabled_label),
+                        expanded = expanded,
+                        onToggleExpand = {
+                            if (group.apps.size > 1) {
+                                expandedUids.value = if (expanded) expandedUids.value - group.uid else expandedUids.value + group.uid
+                            }
+                        },
+                        onOpenApp = onNavigateToAppConfig,
+                    )
                 }
             }
         }

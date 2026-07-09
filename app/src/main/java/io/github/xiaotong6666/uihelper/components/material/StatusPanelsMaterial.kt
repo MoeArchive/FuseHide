@@ -28,14 +28,13 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import java.util.Locale
@@ -47,51 +46,170 @@ fun StatusChipMaterial(
     modifier: Modifier = Modifier,
     supportingText: String? = null,
     metaText: String? = null,
+    supportingMinLines: Int = 0,
+    metaMinLines: Int = 0,
     emphasized: Boolean = false,
     onClick: (() -> Unit)? = null,
 ) {
-    val containerColor = if (emphasized) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHighest
+    val containerColor = if (emphasized) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceBright
     val contentColor = if (emphasized) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
-    if (onClick != null) {
-        ElevatedCard(modifier = modifier.heightIn(min = 118.dp), colors = CardDefaults.elevatedCardColors(containerColor = containerColor, contentColor = contentColor), onClick = onClick, shape = MaterialTheme.shapes.small) {
-            StatusChipMaterialContent(label, value, supportingText, metaText, emphasized, contentColor)
+    TonalCardMaterial(
+        modifier = modifier.heightIn(min = 124.dp),
+        containerColor = containerColor,
+        contentColor = contentColor,
+        onClick = onClick,
+    ) {
+        StatusChipMaterialContent(
+            label = label,
+            value = value,
+            supportingText = supportingText,
+            metaText = metaText,
+            supportingMinLines = supportingMinLines,
+            metaMinLines = metaMinLines,
+            emphasized = emphasized,
+            contentColor = contentColor,
+        )
+    }
+}
+
+@Composable
+private fun StatusChipMaterialContent(
+    label: String,
+    value: String,
+    supportingText: String?,
+    metaText: String?,
+    supportingMinLines: Int,
+    metaMinLines: Int,
+    emphasized: Boolean,
+    contentColor: Color,
+) {
+    Column(
+        modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(5.dp),
+    ) {
+        Text(
+            text = label.uppercase(Locale.US),
+            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+            color = if (emphasized) contentColor.copy(alpha = 0.78f) else MaterialTheme.colorScheme.primary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.headlineSmall,
+            color = contentColor,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        if (supportingText != null || supportingMinLines > 0) {
+            val reservedSupportingLines = maxOf(1, supportingMinLines)
+            Text(
+                text = supportingText.orEmpty(),
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (supportingText.isNullOrEmpty()) {
+                    Color.Transparent
+                } else if (emphasized) {
+                    contentColor.copy(alpha = 0.86f)
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+                minLines = reservedSupportingLines,
+                maxLines = maxOf(2, reservedSupportingLines),
+                overflow = TextOverflow.Ellipsis,
+            )
         }
-    } else {
-        ElevatedCard(modifier = modifier.heightIn(min = 118.dp), colors = CardDefaults.elevatedCardColors(containerColor = containerColor, contentColor = contentColor), shape = MaterialTheme.shapes.small) {
-            StatusChipMaterialContent(label, value, supportingText, metaText, emphasized, contentColor)
+        if (metaText != null || metaMinLines > 0) {
+            val reservedMetaLines = maxOf(1, metaMinLines)
+            Text(
+                text = metaText.orEmpty(),
+                style = MaterialTheme.typography.bodySmall,
+                color = if (metaText.isNullOrEmpty()) {
+                    Color.Transparent
+                } else if (emphasized) {
+                    contentColor.copy(alpha = 0.78f)
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+                minLines = reservedMetaLines,
+                maxLines = maxOf(1, reservedMetaLines),
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }
 
 @Composable
-private fun StatusChipMaterialContent(label: String, value: String, supportingText: String?, metaText: String?, emphasized: Boolean, contentColor: Color) {
-    Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(text = label.uppercase(Locale.US), style = MaterialTheme.typography.labelSmall, color = if (emphasized) contentColor.copy(alpha = 0.72f) else MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Text(text = value, style = MaterialTheme.typography.titleLarge, color = if (emphasized) contentColor else MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        if (supportingText != null) Text(text = supportingText, style = MaterialTheme.typography.bodySmall, color = if (emphasized) contentColor.copy(alpha = 0.84f) else MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
-        if (metaText != null) Text(text = metaText, style = MaterialTheme.typography.bodySmall, color = if (emphasized) contentColor.copy(alpha = 0.84f) else MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-    }
-}
-
-@Composable
-fun MetricCardMaterial(label: String, value: String, modifier: Modifier = Modifier, valueMaxLines: Int = 2, monospace: Boolean = false) {
-    ElevatedCard(modifier = modifier.heightIn(min = 96.dp), colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest, contentColor = MaterialTheme.colorScheme.onSurface), shape = MaterialTheme.shapes.small) {
-        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(text = label.uppercase(Locale.US), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(text = value, style = MaterialTheme.typography.bodyLarge, fontFamily = if (monospace) FontFamily.Monospace else FontFamily.Default, maxLines = valueMaxLines, overflow = TextOverflow.Ellipsis)
+fun MetricCardMaterial(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    valueMaxLines: Int = 2,
+    monospace: Boolean = false,
+) {
+    TonalCardMaterial(
+        modifier = modifier.heightIn(min = 100.dp),
+        containerColor = MaterialTheme.colorScheme.surfaceBright,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 18.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(5.dp),
+        ) {
+            Text(
+                text = label.uppercase(Locale.US),
+                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = MaterialTheme.colorScheme.primary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyLarge,
+                fontFamily = if (monospace) FontFamily.Monospace else FontFamily.Default,
+                maxLines = valueMaxLines,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }
 
 @Composable
-fun InfoPanelMaterial(title: String, text: String, monospace: Boolean = false, emphasized: Boolean = false) {
-    val containerColor = if (emphasized) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceContainerHighest
+fun InfoPanelMaterial(
+    title: String,
+    text: String,
+    monospace: Boolean = false,
+    emphasized: Boolean = false,
+) {
+    val containerColor = if (emphasized) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceContainerHigh
     val contentColor = if (emphasized) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSurface
-    ElevatedCard(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.elevatedCardColors(containerColor = containerColor, contentColor = contentColor), shape = MaterialTheme.shapes.small) {
-        Column(modifier = Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (title.isNotEmpty()) Text(title, style = MaterialTheme.typography.labelSmall, color = contentColor.copy(alpha = 0.6f))
+    TonalCardMaterial(
+        modifier = Modifier.fillMaxWidth(),
+        containerColor = containerColor,
+        contentColor = contentColor,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            if (title.isNotEmpty()) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                    color = contentColor.copy(alpha = 0.72f),
+                )
+            }
             SelectionContainer {
-                Text(text = text, modifier = Modifier.fillMaxWidth().wrapContentHeight(), fontFamily = if (monospace) FontFamily.Monospace else FontFamily.Default, style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    text = text,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .wrapContentHeight(),
+                    fontFamily = if (monospace) FontFamily.Monospace else FontFamily.Default,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
             }
         }
     }
@@ -99,34 +217,92 @@ fun InfoPanelMaterial(title: String, text: String, monospace: Boolean = false, e
 
 @Composable
 fun MonospaceBlockMaterial(text: String, modifier: Modifier = Modifier) {
-    SelectionContainer { Text(text = text, modifier = modifier.fillMaxWidth().wrapContentHeight(), fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodyMedium) }
+    SelectionContainer {
+        Text(
+            text = text,
+            modifier = modifier
+                .fillMaxWidth()
+                .wrapContentHeight(),
+            fontFamily = FontFamily.Monospace,
+            style = MaterialTheme.typography.bodyMedium,
+        )
+    }
 }
 
 @Composable
 fun DeviceStatusListMaterial(infoPairs: List<Pair<String, String>>) {
-    ElevatedCard(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.small) {
-        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+    TonalCardMaterial(
+        modifier = Modifier.fillMaxWidth(),
+        containerColor = MaterialTheme.colorScheme.surfaceBright,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+        ) {
             infoPairs.forEachIndexed { index, pair ->
                 val isLast = index == infoPairs.lastIndex
-                Text(text = pair.first, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
-                Text(text = pair.second, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp, bottom = if (isLast) 0.dp else 24.dp))
+                Text(
+                    text = pair.first,
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = pair.second,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp, bottom = if (isLast) 0.dp else 18.dp),
+                )
             }
         }
     }
 }
 
 @Composable
-fun RuntimeSummaryCardMaterial(summaryText: String, snapshotText: String, emphasized: Boolean) {
+fun RuntimeSummaryCardMaterial(
+    summaryText: String,
+    snapshotText: String,
+    emphasized: Boolean,
+) {
+    val containerColor = if (emphasized) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceBright
     val contentColor = if (emphasized) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSurface
-    val cardColors = if (emphasized) CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.errorContainer, contentColor = contentColor) else CardDefaults.elevatedCardColors(contentColor = contentColor)
-    ElevatedCard(modifier = Modifier.fillMaxWidth(), colors = cardColors, shape = MaterialTheme.shapes.small) {
+    TonalCardMaterial(
+        modifier = Modifier.fillMaxWidth(),
+        containerColor = containerColor,
+        contentColor = contentColor,
+    ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            if (summaryText.isNotEmpty()) Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) { Text(text = summaryText, style = MaterialTheme.typography.bodyMedium, color = contentColor) }
-            if (summaryText.isNotEmpty() && snapshotText.isNotEmpty()) SettingsGroupDividerMaterial()
+            if (summaryText.isNotEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 18.dp, vertical = 16.dp),
+                ) {
+                    Text(
+                        text = summaryText,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = contentColor,
+                    )
+                }
+            }
+            if (summaryText.isNotEmpty() && snapshotText.isNotEmpty()) {
+                SettingsGroupDividerMaterial()
+            }
             if (snapshotText.isNotEmpty()) {
                 SelectionContainer {
-                    Box(modifier = Modifier.fillMaxWidth().heightIn(max = 200.dp).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 14.dp)) {
-                        Text(text = snapshotText, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodyMedium, color = contentColor)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 220.dp)
+                            .verticalScroll(rememberScrollState())
+                            .padding(horizontal = 18.dp, vertical = 16.dp),
+                    ) {
+                        Text(
+                            text = snapshotText,
+                            fontFamily = FontFamily.Monospace,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = contentColor,
+                        )
                     }
                 }
             }

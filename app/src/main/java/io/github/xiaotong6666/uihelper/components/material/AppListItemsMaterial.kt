@@ -35,7 +35,6 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -101,11 +100,12 @@ private fun SimpleAppItemMaterial(
     Surface(
         modifier = Modifier.padding(horizontal = 4.dp),
         onClick = onNavigate,
-        color = if (matched) colorScheme.secondaryContainer else colorScheme.surfaceColorAtElevation(3.dp),
+        color = if (matched) colorScheme.secondaryContainer else colorScheme.surfaceBright,
+        shape = androidx.compose.material3.MaterialTheme.shapes.large,
     ) {
         ListItem(
             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            headlineContent = { Text(app.label, overflow = TextOverflow.Ellipsis, maxLines = 1) },
+            content = { Text(app.label, overflow = TextOverflow.Ellipsis, maxLines = 1) },
             supportingContent = { Text(app.packageName, overflow = TextOverflow.Ellipsis, maxLines = 1) },
             leadingContent = {
                 AppIconImage(
@@ -120,8 +120,8 @@ private fun SimpleAppItemMaterial(
                 if (app.packageName in hiddenPackages) {
                     StatusTag(
                         label = enabledLabel,
-                        backgroundColor = colorScheme.primary,
-                        contentColor = colorScheme.onPrimary,
+                        backgroundColor = colorScheme.primaryContainer,
+                        contentColor = colorScheme.onPrimaryContainer,
                     )
                 } else {
                     Icon(Icons.Filled.Remove, contentDescription = null, modifier = Modifier.padding(end = 4.dp))
@@ -170,15 +170,15 @@ private fun GroupItemMaterial(
                 if (group.primary.packageName in hiddenPackages) {
                     StatusTag(
                         label = enabledLabel,
-                        backgroundColor = colorScheme.primary,
-                        contentColor = colorScheme.onPrimary,
+                        backgroundColor = colorScheme.primaryContainer,
+                        contentColor = colorScheme.onPrimaryContainer,
                     )
                 }
                 if (userId != 0) {
                     StatusTag(
                         label = "USER $userId",
-                        backgroundColor = colorScheme.tertiary,
-                        contentColor = colorScheme.onTertiary,
+                        backgroundColor = colorScheme.tertiaryContainer,
+                        contentColor = colorScheme.onTertiaryContainer,
                     )
                 }
             }

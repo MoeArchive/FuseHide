@@ -19,7 +19,6 @@
 package io.github.xiaotong6666.uihelper.components.material
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -27,30 +26,25 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 
 @Composable
 fun SettingsGroupMaterial(content: @Composable ColumnScope.() -> Unit) {
-    Surface(
+    TonalCardMaterial(
         modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        shape = MaterialTheme.shapes.medium,
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
     ) {
-        Column(modifier = Modifier.fillMaxWidth(), content = content)
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            content = content,
+        )
     }
 }
 
@@ -59,13 +53,7 @@ fun SettingsGroupHeaderMaterial(text: String) {
     Text(
         text = text,
         modifier = Modifier.padding(start = 32.dp, end = 16.dp, top = 8.dp, bottom = 12.dp),
-        style = TextStyle(
-            fontFamily = FontFamily.Default,
-            fontWeight = FontWeight.Normal,
-            fontSize = 14.sp,
-            lineHeight = 20.sp,
-            letterSpacing = 0.sp,
-        ),
+        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
         color = MaterialTheme.colorScheme.primary,
     )
 }
@@ -79,28 +67,31 @@ fun SettingsToggleItemMaterial(
 ) {
     SettingsItemSurfaceMaterial(onClick = onToggle) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 18.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(text = title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-                Text(text = description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(3.dp),
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
-            Switch(
+            ExpressiveSwitchMaterial(
                 checked = checked,
                 onCheckedChange = null,
                 modifier = Modifier.clearAndSetSemantics {},
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                    checkedTrackColor = MaterialTheme.colorScheme.primary,
-                    checkedBorderColor = Color.Transparent,
-                    checkedIconColor = MaterialTheme.colorScheme.primary,
-                    uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                    uncheckedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                    uncheckedIconColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                ),
             )
         }
     }
@@ -109,11 +100,22 @@ fun SettingsToggleItemMaterial(
 @Composable
 fun SettingsInfoItemMaterial(title: String, value: String) {
     SettingsItemSurfaceMaterial {
-        Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(text = title, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(text = value, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
-            }
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 18.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(3.dp),
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
+                color = MaterialTheme.colorScheme.onSurface,
+            )
         }
     }
 }
@@ -121,18 +123,22 @@ fun SettingsInfoItemMaterial(title: String, value: String) {
 @Composable
 fun SettingsGroupDividerMaterial() {
     HorizontalDivider(
-        modifier = Modifier.padding(horizontal = 16.dp),
-        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f),
+        modifier = Modifier.padding(horizontal = 18.dp),
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
         thickness = 0.75.dp,
     )
 }
 
 @Composable
-private fun SettingsItemSurfaceMaterial(onClick: (() -> Unit)? = null, content: @Composable () -> Unit) {
-    val shape = MaterialTheme.shapes.medium
-    if (onClick != null) {
-        Surface(modifier = Modifier.fillMaxWidth().clip(shape), color = Color.Transparent, onClick = onClick, shape = shape, content = content)
-    } else {
-        Surface(modifier = Modifier.fillMaxWidth().clip(shape), color = Color.Transparent, shape = shape, content = content)
-    }
+private fun SettingsItemSurfaceMaterial(
+    onClick: (() -> Unit)? = null,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    TonalCardMaterial(
+        modifier = Modifier.fillMaxWidth(),
+        onClick = onClick,
+        containerColor = Color.Transparent,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        content = content,
+    )
 }

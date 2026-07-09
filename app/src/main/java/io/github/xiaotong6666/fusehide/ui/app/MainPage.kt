@@ -24,23 +24,36 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.MutatePriority
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ShortNavigationBar
+import androidx.compose.material3.ShortNavigationBarItem
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -74,9 +87,12 @@ import io.github.xiaotong6666.fusehide.ui.feature.home.HomePage
 import io.github.xiaotong6666.fusehide.ui.feature.settings.SettingsPage
 import io.github.xiaotong6666.uihelper.chrome.ComposableContent
 import io.github.xiaotong6666.uihelper.chrome.LocalAppChromeState
+import io.github.xiaotong6666.uihelper.chrome.LocalMaterialNestedScrollConnection
 import io.github.xiaotong6666.uihelper.chrome.LocalMiuixCollapsedFractionProvider
 import io.github.xiaotong6666.uihelper.chrome.LocalMiuixNestedScrollConnection
 import io.github.xiaotong6666.uihelper.chrome.rememberAppChromeState
+import io.github.xiaotong6666.uihelper.material.ExpressiveScaffold
+import io.github.xiaotong6666.uihelper.material.expressiveTopAppBarColors
 import io.github.xiaotong6666.uihelper.material.materialScaffoldEdgeToEdgeInsets
 import io.github.xiaotong6666.uihelper.material.materialTopBarEdgeToEdgeInsets
 import io.github.xiaotong6666.uihelper.mode.LocalUiMode
@@ -97,6 +113,7 @@ private data class MainDestinationSpec(
     val destination: MainDestination,
     val title: String,
     val icon: ImageVector,
+    val selectedIcon: ImageVector,
 )
 
 private class MainPagerState(
@@ -155,7 +172,7 @@ private fun rememberMainPagerState(
     MainPagerState(pagerState, coroutineScope)
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun MainPage(
     selectedTab: Int,
@@ -174,10 +191,10 @@ fun MainPage(
 ) {
     val pageSpecs = remember {
         listOf(
-            MainDestinationSpec(MainDestination.Home, "", Icons.Outlined.Home),
-            MainDestinationSpec(MainDestination.Config, "", Icons.Outlined.Tune),
-            MainDestinationSpec(MainDestination.Probe, "", Icons.Outlined.Search),
-            MainDestinationSpec(MainDestination.Settings, "", Icons.Outlined.Settings),
+            MainDestinationSpec(MainDestination.Home, "", Icons.Outlined.Home, Icons.Filled.Home),
+            MainDestinationSpec(MainDestination.Config, "", Icons.Outlined.Tune, Icons.Filled.Tune),
+            MainDestinationSpec(MainDestination.Probe, "", Icons.Outlined.Search, Icons.Filled.Search),
+            MainDestinationSpec(MainDestination.Settings, "", Icons.Outlined.Settings, Icons.Filled.Settings),
         )
     }.map { spec ->
         spec.copy(
@@ -306,8 +323,8 @@ fun MainPage(
         }
 
         UiMode.Material -> {
-            val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
-            Scaffold(
+            val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+            ExpressiveScaffold(
                 modifier = Modifier
                     .fillMaxSize()
                     .then(
@@ -319,33 +336,37 @@ fun MainPage(
                     ),
                 contentWindowInsets = materialScaffoldEdgeToEdgeInsets(),
                 topBar = chromeSpec.materialTopBar ?: {
-                    Column {
-                        TopAppBar(
-                            title = {
-                                Text(text = activePage.title, style = MaterialTheme.typography.headlineSmall)
-                            },
-                            actions = {
-                                chromeSpec.materialActions?.invoke(this)
-                            },
-                            colors = TopAppBarDefaults.topAppBarColors(
-                                containerColor = MaterialTheme.colorScheme.surface,
-                                scrolledContainerColor = MaterialTheme.colorScheme.surface,
-                            ),
-                            scrollBehavior = scrollBehavior,
-                            windowInsets = materialTopBarEdgeToEdgeInsets(),
-                        )
-                    }
+                    LargeFlexibleTopAppBar(
+                        title = { Text(text = activePage.title) },
+                        actions = {
+                            chromeSpec.materialActions?.invoke(this)
+                        },
+                        colors = expressiveTopAppBarColors(),
+                        scrollBehavior = scrollBehavior,
+                        windowInsets = materialTopBarEdgeToEdgeInsets(),
+                    )
                 },
                 bottomBar = if (chromeSpec.hideBottomBar) {
                     {}
                 } else {
                     {
-                        NavigationBar {
+                        ShortNavigationBar(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                            windowInsets = WindowInsets.systemBars.union(WindowInsets.displayCutout).only(
+                                WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom,
+                            ),
+                        ) {
                             pageSpecs.forEachIndexed { index, page ->
-                                NavigationBarItem(
+                                val selected = activePageIndex == index
+                                ShortNavigationBarItem(
                                     selected = activePageIndex == index,
                                     onClick = { onPageSelected(index) },
-                                    icon = { Icon(page.icon, contentDescription = page.title) },
+                                    icon = {
+                                        Icon(
+                                            imageVector = if (selected) page.selectedIcon else page.icon,
+                                            contentDescription = page.title,
+                                        )
+                                    },
                                     label = { Text(page.title) },
                                 )
                             }
@@ -353,7 +374,10 @@ fun MainPage(
                     }
                 },
             ) { paddingValues ->
-                CompositionLocalProvider(LocalAppChromeState provides appChromeState) {
+                CompositionLocalProvider(
+                    LocalAppChromeState provides appChromeState,
+                    LocalMaterialNestedScrollConnection provides scrollBehavior.nestedScrollConnection,
+                ) {
                     Box(modifier = Modifier.fillMaxSize()) {
                         HorizontalPager(
                             state = pagerState,

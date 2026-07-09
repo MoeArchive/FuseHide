@@ -26,22 +26,32 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchColors
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -58,12 +68,12 @@ fun SectionTitleMaterial(
     Text(
         text = text,
         style = when (style) {
-            SectionTitleStyle.Large -> MaterialTheme.typography.titleLarge
-            SectionTitleStyle.Medium -> MaterialTheme.typography.titleMedium
-            SectionTitleStyle.EmphasizedMedium -> MaterialTheme.typography.titleMedium
-            SectionTitleStyle.Small -> MaterialTheme.typography.titleSmall
-            SectionTitleStyle.Label -> MaterialTheme.typography.titleSmall
-            SectionTitleStyle.Subsection -> MaterialTheme.typography.titleLarge
+            SectionTitleStyle.Large -> MaterialTheme.typography.headlineSmall
+            SectionTitleStyle.Medium -> MaterialTheme.typography.titleLarge
+            SectionTitleStyle.EmphasizedMedium -> MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold)
+            SectionTitleStyle.Small -> MaterialTheme.typography.titleMedium
+            SectionTitleStyle.Label -> MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold)
+            SectionTitleStyle.Subsection -> MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
         },
         color = if (style == SectionTitleStyle.Label) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
     )
@@ -85,6 +95,79 @@ fun SectionDescriptionMaterial(
 }
 
 @Composable
+fun TonalCardMaterial(
+    modifier: Modifier = Modifier,
+    containerColor: Color = MaterialTheme.colorScheme.surfaceBright,
+    contentColor: Color = contentColorFor(containerColor),
+    onClick: (() -> Unit)? = null,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val colors = CardDefaults.cardColors(
+        containerColor = containerColor,
+        contentColor = contentColor,
+    )
+    if (onClick != null) {
+        Card(
+            onClick = onClick,
+            modifier = modifier,
+            colors = colors,
+            shape = MaterialTheme.shapes.large,
+        ) {
+            Column(content = content)
+        }
+    } else {
+        Card(
+            modifier = modifier,
+            colors = colors,
+            shape = MaterialTheme.shapes.large,
+        ) {
+            Column(content = content)
+        }
+    }
+}
+
+@Composable
+fun ExpressiveSwitchMaterial(
+    checked: Boolean,
+    onCheckedChange: ((Boolean) -> Unit)?,
+    modifier: Modifier = Modifier,
+    colors: SwitchColors = expressiveSwitchColors(),
+) {
+    Switch(
+        checked = checked,
+        onCheckedChange = onCheckedChange,
+        modifier = modifier,
+        colors = colors,
+        thumbContent = {
+            Icon(
+                imageVector = if (checked) Icons.Filled.Check else Icons.Filled.Close,
+                contentDescription = null,
+                modifier = Modifier.padding(1.dp),
+            )
+        },
+        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+    )
+}
+
+@Composable
+fun expressiveSwitchColors(
+    checkedIconColor: Color = MaterialTheme.colorScheme.primary,
+    uncheckedIconColor: Color = MaterialTheme.colorScheme.surfaceContainerHighest,
+    disabledUncheckedTrackColor: Color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.12f),
+): SwitchColors = SwitchDefaults.colors(
+    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+    checkedTrackColor = MaterialTheme.colorScheme.primary,
+    checkedBorderColor = Color.Transparent,
+    checkedIconColor = checkedIconColor,
+    uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+    uncheckedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+    uncheckedIconColor = uncheckedIconColor,
+    disabledUncheckedTrackColor = disabledUncheckedTrackColor,
+    disabledUncheckedIconColor = uncheckedIconColor,
+)
+
+@Composable
 fun AppTextFieldMaterial(
     value: String,
     onValueChange: (String) -> Unit,
@@ -92,19 +175,24 @@ fun AppTextFieldMaterial(
     modifier: Modifier = Modifier,
     singleLine: Boolean = false,
 ) {
-    OutlinedTextField(
+    TextField(
         value = value,
         onValueChange = onValueChange,
         modifier = modifier,
         label = { Text(label) },
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = MaterialTheme.colorScheme.primary,
-            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+        colors = TextFieldDefaults.colors(
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            focusedIndicatorColor = Color.Transparent,
+            unfocusedIndicatorColor = Color.Transparent,
+            disabledIndicatorColor = Color.Transparent,
             focusedLabelColor = MaterialTheme.colorScheme.primary,
             unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
         ),
         textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
         singleLine = singleLine,
+        shape = MaterialTheme.shapes.large,
     )
 }
 
@@ -117,20 +205,25 @@ fun ConfigTextFieldMaterial(
     minLines: Int = 1,
     maxLines: Int = Int.MAX_VALUE,
 ) {
-    OutlinedTextField(
+    TextField(
         value = value,
         onValueChange = onValueChange,
         modifier = modifier,
         label = { Text(label) },
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = MaterialTheme.colorScheme.primary,
-            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+        colors = TextFieldDefaults.colors(
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            focusedIndicatorColor = Color.Transparent,
+            unfocusedIndicatorColor = Color.Transparent,
+            disabledIndicatorColor = Color.Transparent,
             focusedLabelColor = MaterialTheme.colorScheme.primary,
             unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
         ),
         textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
         minLines = minLines,
         maxLines = maxLines,
+        shape = MaterialTheme.shapes.large,
     )
 }
 
@@ -141,25 +234,28 @@ fun ConfigToggleCardMaterial(
     description: String,
     onToggle: () -> Unit,
 ) {
-    ElevatedCard(
+    TonalCardMaterial(
         onClick = onToggle,
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-        ),
-        shape = MaterialTheme.shapes.small,
+        containerColor = if (checked) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceBright,
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(14.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 18.dp, vertical = 16.dp),
             verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Checkbox(
                 checked = checked,
                 onCheckedChange = null,
             )
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
                 Text(
-                    title,
-                    style = MaterialTheme.typography.titleMedium,
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                 )
                 Text(
                     text = description,
@@ -167,6 +263,10 @@ fun ConfigToggleCardMaterial(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            ExpressiveSwitchMaterial(
+                checked = checked,
+                onCheckedChange = null,
+            )
         }
     }
 }
@@ -193,36 +293,36 @@ fun DualActionRowMaterial(
     val hasSecondary = secondaryLabel.isNotEmpty()
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = if (hasPrimary && hasSecondary) Arrangement.spacedBy(12.dp) else Arrangement.Start,
+        horizontalArrangement = if (hasPrimary && hasSecondary) Arrangement.spacedBy(13.dp) else Arrangement.Start,
     ) {
         val weight = if (hasPrimary && hasSecondary) Modifier.weight(1f) else Modifier.fillMaxWidth()
         if (hasPrimary) {
             if (primaryFilled) {
                 Button(
                     onClick = onPrimaryClick,
-                    modifier = weight.height(48.dp),
-                    shape = MaterialTheme.shapes.small,
+                    modifier = weight.height(52.dp),
+                    shape = MaterialTheme.shapes.large,
                 ) {
                     Text(
                         primaryLabel,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                     )
                 }
             } else {
-                OutlinedButton(
+                FilledTonalButton(
                     onClick = onPrimaryClick,
-                    modifier = weight.height(48.dp),
-                    shape = MaterialTheme.shapes.small,
+                    modifier = weight.height(52.dp),
+                    shape = MaterialTheme.shapes.large,
                 ) {
                     Text(
                         primaryLabel,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                     )
                 }
             }
@@ -230,15 +330,15 @@ fun DualActionRowMaterial(
         if (hasSecondary) {
             OutlinedButton(
                 onClick = onSecondaryClick,
-                modifier = weight.height(48.dp),
-                shape = MaterialTheme.shapes.small,
+                modifier = weight.height(52.dp),
+                shape = MaterialTheme.shapes.large,
             ) {
                 Text(
                     secondaryLabel,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                 )
             }
         }
@@ -252,15 +352,17 @@ fun PrimaryActionButtonMaterial(
 ) {
     Button(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth().height(48.dp),
-        shape = MaterialTheme.shapes.small,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(52.dp),
+        shape = MaterialTheme.shapes.large,
     ) {
         Text(
             text = label,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
         )
     }
 }
@@ -271,6 +373,7 @@ fun SectionCardMaterial(content: @Composable ColumnScope.() -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 2.dp),
+        verticalArrangement = Arrangement.spacedBy(0.dp),
         content = content,
     )
 }
@@ -281,11 +384,15 @@ fun WarningBannerMaterial(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
 ) {
-    val content: @Composable () -> Unit = {
+    TonalCardMaterial(
+        modifier = modifier.fillMaxWidth(),
+        onClick = onClick,
+        containerColor = MaterialTheme.colorScheme.errorContainer,
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = 18.dp, vertical = 14.dp),
         ) {
             Text(
                 text = message,
@@ -293,26 +400,6 @@ fun WarningBannerMaterial(
                 color = MaterialTheme.colorScheme.onErrorContainer,
             )
         }
-    }
-    if (onClick != null) {
-        Card(
-            onClick = onClick,
-            modifier = modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.errorContainer,
-                contentColor = MaterialTheme.colorScheme.onErrorContainer,
-            ),
-            shape = MaterialTheme.shapes.large,
-        ) { content() }
-    } else {
-        Card(
-            modifier = modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.errorContainer,
-                contentColor = MaterialTheme.colorScheme.onErrorContainer,
-            ),
-            shape = MaterialTheme.shapes.large,
-        ) { content() }
     }
 }
 
@@ -322,38 +409,22 @@ fun InfoBannerMaterial(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
 ) {
-    val content: @Composable () -> Unit = {
+    TonalCardMaterial(
+        modifier = modifier.fillMaxWidth(),
+        onClick = onClick,
+        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
+                .padding(horizontal = 18.dp, vertical = 14.dp),
         ) {
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
             )
         }
-    }
-    if (onClick != null) {
-        Card(
-            onClick = onClick,
-            modifier = modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
-                contentColor = MaterialTheme.colorScheme.primary,
-            ),
-            shape = MaterialTheme.shapes.large,
-        ) { content() }
-    } else {
-        Card(
-            modifier = modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
-                contentColor = MaterialTheme.colorScheme.primary,
-            ),
-            shape = MaterialTheme.shapes.large,
-        ) { content() }
     }
 }
 
@@ -363,17 +434,19 @@ fun ActionGridMaterial(actions: List<GridActionItem>) {
     rows.forEachIndexed { rowIndex, rowActions ->
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(13.dp),
         ) {
             rowActions.forEach { item ->
-                val modifier = Modifier.weight(1f)
+                val modifier = Modifier
+                    .weight(1f)
+                    .height(52.dp)
                 val content: @Composable () -> Unit = {
                     Text(
                         item.label,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                     )
                 }
                 when {
@@ -381,28 +454,28 @@ fun ActionGridMaterial(actions: List<GridActionItem>) {
                         onClick = item.action,
                         modifier = modifier,
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                        shape = MaterialTheme.shapes.small,
+                        shape = MaterialTheme.shapes.large,
                         content = { content() },
                     )
 
                     item.style == GridActionStyle.Filled -> Button(
                         onClick = item.action,
                         modifier = modifier,
-                        shape = MaterialTheme.shapes.small,
+                        shape = MaterialTheme.shapes.large,
                         content = { content() },
                     )
 
                     item.style == GridActionStyle.Tonal -> FilledTonalButton(
                         onClick = item.action,
                         modifier = modifier,
-                        shape = MaterialTheme.shapes.small,
+                        shape = MaterialTheme.shapes.large,
                         content = { content() },
                     )
 
                     else -> OutlinedButton(
                         onClick = item.action,
                         modifier = modifier,
-                        shape = MaterialTheme.shapes.small,
+                        shape = MaterialTheme.shapes.large,
                         content = { content() },
                     )
                 }
@@ -412,7 +485,7 @@ fun ActionGridMaterial(actions: List<GridActionItem>) {
             }
         }
         if (rowIndex < rows.lastIndex) {
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(10.dp))
         }
     }
 }

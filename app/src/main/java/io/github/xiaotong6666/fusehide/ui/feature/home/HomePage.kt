@@ -20,9 +20,11 @@ package io.github.xiaotong6666.fusehide.ui.feature.home
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -99,11 +101,16 @@ private fun HomePageContent(
         }
 
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(IntrinsicSize.Min),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             StatusChip(
-                modifier = Modifier.weight(1f).heightIn(min = 130.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .heightIn(min = 130.dp),
                 label = stringResource(R.string.label_hook),
                 value = hookSummaryValue(isHooked = hookStatus.isHooked, hookCheckCompleted = hookStatus.hookCheckCompleted),
                 supportingText = hookSummarySupportingText(
@@ -112,11 +119,16 @@ private fun HomePageContent(
                     hookedPackage = hookStatus.hookedPackage,
                 ),
                 metaText = hookSummaryMetaText(isHooked = hookStatus.isHooked, hookedPid = hookStatus.hookedPid),
+                supportingMinLines = 2,
+                metaMinLines = 1,
                 emphasized = hookStatus.isHooked,
                 onClick = callbacks.onStatusClick,
             )
             StatusChip(
-                modifier = Modifier.weight(1f).heightIn(min = 130.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .heightIn(min = 130.dp),
                 label = stringResource(R.string.label_sync),
                 value = if (resultsNeedAttention) stringResource(R.string.state_sync_needs_review) else stringResource(R.string.state_sync_ok),
                 supportingText = configState.draftVsAppliedDiff.summary,

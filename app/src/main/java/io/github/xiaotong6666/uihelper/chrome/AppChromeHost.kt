@@ -70,6 +70,7 @@ class AppChromeState {
 }
 
 val LocalAppChromeState = compositionLocalOf<AppChromeState?> { null }
+val LocalMaterialNestedScrollConnection = compositionLocalOf<NestedScrollConnection?> { null }
 val LocalMiuixNestedScrollConnection = compositionLocalOf<NestedScrollConnection?> { null }
 val LocalMiuixCollapsedFractionProvider = compositionLocalOf<(() -> Float)?> { null }
 

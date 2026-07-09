@@ -106,6 +106,10 @@ android {
     kotlin {
         compilerOptions {
             jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+            freeCompilerArgs.addAll(
+                "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api",
+                "-opt-in=androidx.compose.material3.ExperimentalMaterial3ExpressiveApi",
+            )
         }
     }
     buildFeatures {
@@ -149,6 +153,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.viewmodel.navigation3)
     implementation(libs.androidx.navigation3.runtime)
+    implementation(libs.material.kolor)
     implementation(libs.miuix.navigation3.ui)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

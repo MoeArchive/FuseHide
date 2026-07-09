@@ -43,15 +43,57 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 import java.util.Locale
 
 @Composable
-fun StatusChipMiuix(label: String, value: String, modifier: Modifier = Modifier, supportingText: String? = null, metaText: String? = null, emphasized: Boolean = false, onClick: (() -> Unit)? = null) {
+fun StatusChipMiuix(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    supportingText: String? = null,
+    metaText: String? = null,
+    supportingMinLines: Int = 0,
+    metaMinLines: Int = 0,
+    emphasized: Boolean = false,
+    onClick: (() -> Unit)? = null,
+) {
     val containerColor = if (emphasized) MiuixTheme.colorScheme.primaryVariant else MiuixTheme.colorScheme.surfaceContainerHighest
     val contentColor = if (emphasized) MiuixTheme.colorScheme.onPrimaryVariant else MiuixTheme.colorScheme.onSurfaceContainerHighest
     Card(modifier = modifier.heightIn(min = 118.dp), colors = CardDefaults.defaultColors(color = containerColor, contentColor = contentColor), onClick = onClick, insideMargin = PaddingValues(0.dp)) {
         Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(text = label.uppercase(Locale.US), style = MiuixTheme.textStyles.footnote2, color = if (emphasized) MiuixTheme.colorScheme.onPrimaryVariant.copy(alpha = 0.72f) else MiuixTheme.colorScheme.onSurfaceVariantSummary, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(text = value, style = MiuixTheme.textStyles.title3.copy(fontWeight = FontWeight.Medium), color = if (emphasized) Color.White else MiuixTheme.colorScheme.onSurfaceContainerHighest, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            if (supportingText != null) Text(text = supportingText, style = MiuixTheme.textStyles.footnote1, color = if (emphasized) MiuixTheme.colorScheme.onPrimaryVariant.copy(alpha = 0.84f) else MiuixTheme.colorScheme.onSurfaceVariantSummary, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            if (metaText != null) Text(text = metaText, style = MiuixTheme.textStyles.footnote1, color = if (emphasized) MiuixTheme.colorScheme.onPrimaryVariant.copy(alpha = 0.84f) else MiuixTheme.colorScheme.onSurfaceVariantSummary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (supportingText != null || supportingMinLines > 0) {
+                val reservedSupportingLines = maxOf(1, supportingMinLines)
+                Text(
+                    text = supportingText.orEmpty(),
+                    style = MiuixTheme.textStyles.footnote1,
+                    color = if (supportingText.isNullOrEmpty()) {
+                        Color.Transparent
+                    } else if (emphasized) {
+                        MiuixTheme.colorScheme.onPrimaryVariant.copy(alpha = 0.84f)
+                    } else {
+                        MiuixTheme.colorScheme.onSurfaceVariantSummary
+                    },
+                    minLines = reservedSupportingLines,
+                    maxLines = maxOf(2, reservedSupportingLines),
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            if (metaText != null || metaMinLines > 0) {
+                val reservedMetaLines = maxOf(1, metaMinLines)
+                Text(
+                    text = metaText.orEmpty(),
+                    style = MiuixTheme.textStyles.footnote1,
+                    color = if (metaText.isNullOrEmpty()) {
+                        Color.Transparent
+                    } else if (emphasized) {
+                        MiuixTheme.colorScheme.onPrimaryVariant.copy(alpha = 0.84f)
+                    } else {
+                        MiuixTheme.colorScheme.onSurfaceVariantSummary
+                    },
+                    minLines = reservedMetaLines,
+                    maxLines = maxOf(1, reservedMetaLines),
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
 }

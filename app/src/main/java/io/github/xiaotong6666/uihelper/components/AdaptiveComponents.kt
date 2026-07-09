@@ -268,12 +268,14 @@ fun StatusChip(
     modifier: Modifier = Modifier,
     supportingText: String? = null,
     metaText: String? = null,
+    supportingMinLines: Int = 0,
+    metaMinLines: Int = 0,
     emphasized: Boolean = false,
     onClick: (() -> Unit)? = null,
 ) {
     when (LocalUiMode.current) {
-        UiMode.Miuix -> StatusChipMiuix(label, value, modifier, supportingText, metaText, emphasized, onClick)
-        UiMode.Material -> StatusChipMaterial(label, value, modifier, supportingText, metaText, emphasized, onClick)
+        UiMode.Miuix -> StatusChipMiuix(label, value, modifier, supportingText, metaText, supportingMinLines, metaMinLines, emphasized, onClick)
+        UiMode.Material -> StatusChipMaterial(label, value, modifier, supportingText, metaText, supportingMinLines, metaMinLines, emphasized, onClick)
     }
 }
 
