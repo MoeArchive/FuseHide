@@ -47,7 +47,6 @@ import io.github.xiaotong6666.fusehide.R
 import io.github.xiaotong6666.fusehide.ui.core.model.ConfigUiState
 import io.github.xiaotong6666.fusehide.ui.feature.config.applist.widgets.AppListGroupMaterial
 import io.github.xiaotong6666.fusehide.ui.feature.config.applist.widgets.AppListGroupMiuix
-import io.github.xiaotong6666.fusehide.ui.feature.config.applist.widgets.AppListSearchFieldMiuix
 import io.github.xiaotong6666.fusehide.ui.feature.config.applist.widgets.GroupedApps
 import io.github.xiaotong6666.fusehide.ui.feature.config.applist.widgets.SearchStatus
 import io.github.xiaotong6666.uihelper.adaptive.WarningBanner
@@ -265,12 +264,6 @@ fun AppListScreen(
             stringResource(R.string.refresh_refreshing),
             stringResource(R.string.refresh_complete),
         ),
-        miuixCollapsedSearchField = { dynamicTopPadding, placeholder ->
-            AppListSearchFieldMiuix(
-                label = placeholder,
-                dynamicTopPadding = dynamicTopPadding,
-            )
-        },
     )
 }
 
