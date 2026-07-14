@@ -18,31 +18,24 @@
 
 package io.github.xiaotong6666.fusehide.ui.feature.config.appdetail.widgets
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import io.github.xiaotong6666.uihelper.adaptive.GroupedSurface
 import io.github.xiaotong6666.uihelper.common.StatusTag
 import io.github.xiaotong6666.uihelper.material.materialSurfaceLadder
 import io.github.xiaotong6666.uihelper.material.primitive.ExpressiveSwitchMaterial
-import io.github.xiaotong6666.uihelper.material.primitive.SegmentedItemContainer
 import io.github.xiaotong6666.uihelper.material.primitive.SegmentedListItem
 
 @Composable
@@ -55,13 +48,9 @@ fun AppConfigInfoCardMaterial(
     modifier: Modifier = Modifier,
     appIcon: (@Composable () -> Unit)? = null,
 ) {
-    val surfaces = materialSurfaceLadder()
     val userId = uid / 100000
     val appId = if (uid >= 0) uid % 100000 else -1
-    SegmentedItemContainer(
-        modifier = modifier,
-        containerColor = surfaces.grouped,
-    ) {
+    GroupedSurface(modifier = modifier) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -149,51 +138,4 @@ fun AppConfigToggleCardMaterial(
             )
         },
     )
-}
-
-@Composable
-fun AppConfigTargetsCardMaterial(
-    value: String,
-    onValueChange: (String) -> Unit,
-    label: String,
-    description: String,
-    modifier: Modifier = Modifier,
-    minLines: Int = 5,
-    maxLines: Int = 8,
-) {
-    val surfaces = materialSurfaceLadder()
-    SegmentedItemContainer(
-        modifier = modifier,
-        containerColor = surfaces.grouped,
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Text(text = label, style = MaterialTheme.typography.titleMedium)
-            BasicTextField(
-                value = value,
-                onValueChange = onValueChange,
-                modifier = Modifier.fillMaxWidth(),
-                minLines = minLines,
-                maxLines = maxLines,
-                textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
-                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                decorationBox = { innerTextField ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = (minLines * 24).dp)
-                            .clip(MaterialTheme.shapes.large)
-                            .background(surfaces.input)
-                            .padding(vertical = 4.dp)
-                            .padding(horizontal = 14.dp, vertical = 12.dp),
-                    ) {
-                        innerTextField()
-                    }
-                },
-            )
-            Text(text = description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
 }

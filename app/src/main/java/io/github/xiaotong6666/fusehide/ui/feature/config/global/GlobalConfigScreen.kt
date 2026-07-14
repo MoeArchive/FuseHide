@@ -35,12 +35,12 @@ import io.github.xiaotong6666.fusehide.ui.adapter.updatedConfigForVisibleExempti
 import io.github.xiaotong6666.fusehide.ui.core.model.ConfigCallbacks
 import io.github.xiaotong6666.fusehide.ui.core.model.ConfigUiState
 import io.github.xiaotong6666.fusehide.ui.feature.config.appdetail.widgets.AppConfigPageScaffold
-import io.github.xiaotong6666.fusehide.ui.feature.config.appdetail.widgets.AppConfigTargetsCard
 import io.github.xiaotong6666.fusehide.ui.feature.config.appdetail.widgets.AppConfigToggleCard
-import io.github.xiaotong6666.fusehide.ui.feature.config.appdetail.widgets.ConfigDetailGroup
 import io.github.xiaotong6666.fusehide.ui.feature.config.appdetail.widgets.ConfigDetailPageBody
 import io.github.xiaotong6666.fusehide.ui.feature.config.appdetail.widgets.ConfigPageOverflowAction
+import io.github.xiaotong6666.uihelper.adaptive.DetailGroup
 import io.github.xiaotong6666.uihelper.adaptive.InfoBanner
+import io.github.xiaotong6666.uihelper.adaptive.SettingsTextAreaItem
 
 @Composable
 fun GlobalConfigPage(
@@ -80,7 +80,7 @@ fun GlobalConfigPage(
                 message = stringResource(R.string.section_editable_draft_desc),
             )
 
-            ConfigDetailGroup {
+            DetailGroup {
                 item {
                     AppConfigToggleCard(
                         checked = state.currentHideConfig.enableHideAllRootEntries,
@@ -96,41 +96,41 @@ fun GlobalConfigPage(
                 }
             }
 
-            ConfigDetailGroup {
+            DetailGroup {
                 item {
-                    AppConfigTargetsCard(
+                    SettingsTextAreaItem(
                         value = visibleExemptionsDraft,
                         onValueChange = { newValue ->
                             visibleExemptionsDraft = newValue
                             callbacks.onConfigUpdate(updatedConfigForVisibleExemptions(state.currentHideConfig, newValue))
                         },
-                        label = stringResource(R.string.field_visible_exemptions),
+                        title = stringResource(R.string.field_visible_exemptions),
                         description = stringResource(R.string.field_visible_exemptions_help),
                         minLines = 5,
                         maxLines = 5,
                     )
                 }
                 item {
-                    AppConfigTargetsCard(
+                    SettingsTextAreaItem(
                         value = hiddenTargetsDraft,
                         onValueChange = { newValue ->
                             hiddenTargetsDraft = newValue
                             callbacks.onConfigUpdate(updatedConfigForHiddenTargets(state.currentHideConfig, newValue))
                         },
-                        label = stringResource(R.string.field_hidden_targets),
+                        title = stringResource(R.string.field_hidden_targets),
                         description = stringResource(R.string.field_hidden_targets_help),
                         minLines = 5,
                         maxLines = 5,
                     )
                 }
                 item {
-                    AppConfigTargetsCard(
+                    SettingsTextAreaItem(
                         value = hiddenPackagesDraft,
                         onValueChange = { newValue ->
                             hiddenPackagesDraft = newValue
                             callbacks.onConfigUpdate(updatedConfigForHiddenPackages(state.currentHideConfig, newValue))
                         },
-                        label = stringResource(R.string.field_hidden_package_names),
+                        title = stringResource(R.string.field_hidden_package_names),
                         description = stringResource(R.string.field_hidden_package_names_help),
                         minLines = 5,
                         maxLines = 5,

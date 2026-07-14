@@ -18,32 +18,16 @@
 
 package io.github.xiaotong6666.fusehide.ui.feature.config.appdetail.widgets
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import io.github.xiaotong6666.uihelper.adaptive.SectionDescription
-import io.github.xiaotong6666.uihelper.adaptive.SectionTitle
 import io.github.xiaotong6666.uihelper.chrome.DetailSettingsBody
 import io.github.xiaotong6666.uihelper.chrome.DetailSettingsHost
 import io.github.xiaotong6666.uihelper.chrome.DetailSettingsOverflowAction
-import io.github.xiaotong6666.uihelper.material.primitive.SegmentedColumn
 import io.github.xiaotong6666.uihelper.mode.LocalUiMode
 import io.github.xiaotong6666.uihelper.mode.UiMode
-import io.github.xiaotong6666.uihelper.model.SectionDescriptionStyle
-import io.github.xiaotong6666.uihelper.model.SectionTitleStyle
 
 typealias ConfigPageOverflowAction = DetailSettingsOverflowAction
-
-class ConfigDetailGroupScope {
-    internal val items = mutableListOf<@Composable () -> Unit>()
-
-    fun item(content: @Composable () -> Unit) {
-        items += content
-    }
-}
 
 @Composable
 fun AppConfigPageScaffold(
@@ -63,56 +47,6 @@ fun ConfigDetailPageBody(
     content: @Composable () -> Unit,
 ) {
     DetailSettingsBody(contentPadding, scrollModifier, content)
-}
-
-@Composable
-fun ConfigDetailGroup(
-    title: String = "",
-    description: String? = null,
-    content: ConfigDetailGroupScope.() -> Unit,
-) {
-    val items = ConfigDetailGroupScope().apply(content).items
-    if (items.isEmpty()) return
-
-    when (LocalUiMode.current) {
-        UiMode.Material -> {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (title.isNotBlank() || !description.isNullOrBlank()) {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        if (title.isNotBlank()) {
-                            SectionTitle(text = title, style = SectionTitleStyle.Label)
-                        }
-                        if (!description.isNullOrBlank()) {
-                            SectionDescription(text = description, style = SectionDescriptionStyle.Supporting)
-                        }
-                    }
-                }
-                SegmentedColumn {
-                    items.forEach { entry ->
-                        item { entry() }
-                    }
-                }
-            }
-        }
-
-        UiMode.Miuix -> {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                if (title.isNotBlank() || !description.isNullOrBlank()) {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        if (title.isNotBlank()) {
-                            SectionTitle(text = title, style = SectionTitleStyle.Label)
-                        }
-                        if (!description.isNullOrBlank()) {
-                            SectionDescription(text = description, style = SectionDescriptionStyle.Supporting)
-                        }
-                    }
-                }
-                items.forEach { entry ->
-                    entry()
-                }
-            }
-        }
-    }
 }
 
 @Composable
@@ -142,21 +76,5 @@ fun AppConfigToggleCard(
     when (LocalUiMode.current) {
         UiMode.Miuix -> AppConfigToggleCardMiuix(checked, title, description, modifier, onToggle)
         UiMode.Material -> AppConfigToggleCardMaterial(checked, title, description, modifier, onToggle)
-    }
-}
-
-@Composable
-fun AppConfigTargetsCard(
-    value: String,
-    onValueChange: (String) -> Unit,
-    label: String,
-    description: String,
-    modifier: Modifier = Modifier,
-    minLines: Int = 5,
-    maxLines: Int = 8,
-) {
-    when (LocalUiMode.current) {
-        UiMode.Miuix -> AppConfigTargetsCardMiuix(value, onValueChange, label, description, modifier, minLines, maxLines)
-        UiMode.Material -> AppConfigTargetsCardMaterial(value, onValueChange, label, description, modifier, minLines, maxLines)
     }
 }

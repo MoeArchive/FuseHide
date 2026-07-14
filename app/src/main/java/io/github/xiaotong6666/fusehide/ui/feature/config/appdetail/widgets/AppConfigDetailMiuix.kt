@@ -19,26 +19,20 @@
 package io.github.xiaotong6666.fusehide.ui.feature.config.appdetail.widgets
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import io.github.xiaotong6666.uihelper.adaptive.GroupedSurface
 import io.github.xiaotong6666.uihelper.common.StatusTag
 import top.yukonga.miuix.kmp.basic.Card
-import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -55,11 +49,13 @@ fun AppConfigInfoCardMiuix(
 ) {
     val userId = uid / 100000
     val appId = if (uid >= 0) uid % 100000 else -1
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        insideMargin = PaddingValues(start = 12.dp, end = 16.dp, top = 10.dp, bottom = 10.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+    GroupedSurface(modifier = modifier) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 12.dp, end = 16.dp, top = 10.dp, bottom = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             appIcon?.invoke()
             Column(
                 modifier = Modifier
@@ -146,53 +142,6 @@ fun AppConfigToggleCardMiuix(
                 checked = checked,
                 onCheckedChange = null,
             )
-        }
-    }
-}
-
-@Composable
-fun AppConfigTargetsCardMiuix(
-    value: String,
-    onValueChange: (String) -> Unit,
-    label: String,
-    description: String,
-    modifier: Modifier = Modifier,
-    minLines: Int = 5,
-    maxLines: Int = 8,
-) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        insideMargin = PaddingValues(0.dp),
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Text(text = label, style = MiuixTheme.textStyles.headline2, color = MiuixTheme.colorScheme.onSurface)
-            BasicTextField(
-                value = value,
-                onValueChange = onValueChange,
-                modifier = Modifier.fillMaxWidth(),
-                minLines = minLines,
-                maxLines = maxLines,
-                textStyle = TextStyle(
-                    color = MiuixTheme.colorScheme.onSurface,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium,
-                ),
-                cursorBrush = SolidColor(MiuixTheme.colorScheme.primary),
-                decorationBox = { innerTextField ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = (minLines * 24).dp)
-                            .padding(vertical = 4.dp),
-                    ) {
-                        innerTextField()
-                    }
-                },
-            )
-            Text(text = description, style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
         }
     }
 }
