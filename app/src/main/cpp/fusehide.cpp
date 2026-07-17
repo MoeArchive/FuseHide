@@ -36,11 +36,23 @@ std::atomic<int> gReplyErrFallbackLogCount{0};
 std::atomic<int> gErrnoRemapLogCount{0};
 std::atomic<int> gSuspiciousDirectLogCount{0};
 std::atomic<uint64_t> gHideConfigGeneration{1};
+std::atomic<uint64_t> gUidPackageSetGeneration{1};
 std::mutex gUidHideCacheMutex;
 std::unordered_map<uint32_t, UidHideRuleCacheEntry> gUidHideRuleCache;
 std::shared_ptr<const HideConfig> gHideConfig = std::make_shared<HideConfig>(DefaultHideConfig());
+std::shared_ptr<const CompiledHideConfig> gCompiledHideConfig;
 
 namespace {
+
+struct CompiledHideRuleBuilder {
+    bool enableHideAllRootEntries = false;
+    std::vector<std::string> hideAllRootEntriesExemptions;
+    std::vector<std::string> hiddenRootEntryNames;
+    std::vector<std::string> hiddenRelativePaths;
+};
+
+constexpr uint64_t kFingerprintOffsetBasis = 1469598103934665603ULL;
+constexpr uint64_t kFingerprintPrime = 1099511628211ULL;
 
 void AppendUnique(std::vector<std::string>* out, const std::vector<std::string>& values) {
     for (const auto& value : values) {
@@ -50,22 +62,165 @@ void AppendUnique(std::vector<std::string>* out, const std::vector<std::string>&
     }
 }
 
-void MergeGlobalRule(const HideConfig& config, ResolvedHideRule* out) {
+void AppendNormalizedUnique(std::vector<std::string>* out, std::string_view value) {
+    const std::string normalized = NormalizeRelativeHiddenPath(value);
+    if (normalized.empty() || std::find(out->begin(), out->end(), normalized) != out->end()) {
+        return;
+    }
+    out->push_back(normalized);
+}
+
+void MergeGlobalRule(const HideConfig& config, CompiledHideRuleBuilder* out) {
     out->enableHideAllRootEntries =
         out->enableHideAllRootEntries || config.enableHideAllRootEntries;
     AppendUnique(&out->hideAllRootEntriesExemptions, config.hideAllRootEntriesExemptions);
     AppendUnique(&out->hiddenRootEntryNames, config.hiddenRootEntryNames);
-    AppendUnique(&out->hiddenRelativePaths, config.hiddenRelativePaths);
+    for (const auto& hiddenRelativePath : config.hiddenRelativePaths) {
+        AppendNormalizedUnique(&out->hiddenRelativePaths, hiddenRelativePath);
+    }
 }
 
-void MergePackageRule(const PackageHideRule& rule, ResolvedHideRule* out) {
+void MergePackageRule(const PackageHideRule& rule, CompiledHideRuleBuilder* out) {
     AppendUnique(&out->hiddenRootEntryNames, rule.hiddenRootEntryNames);
-    AppendUnique(&out->hiddenRelativePaths, rule.hiddenRelativePaths);
+    for (const auto& hiddenRelativePath : rule.hiddenRelativePaths) {
+        AppendNormalizedUnique(&out->hiddenRelativePaths, hiddenRelativePath);
+    }
 }
 
-bool RuleHasTargets(const ResolvedHideRule& rule) {
+bool RuleHasTargets(const CompiledHideRuleBuilder& rule) {
     return rule.enableHideAllRootEntries || !rule.hiddenRootEntryNames.empty() ||
            !rule.hiddenRelativePaths.empty();
+}
+
+void FingerprintBytes(uint64_t* hash, const void* data, size_t size) {
+    const auto* bytes = reinterpret_cast<const uint8_t*>(data);
+    for (size_t i = 0; i < size; ++i) {
+        *hash ^= static_cast<uint64_t>(bytes[i]);
+        *hash *= kFingerprintPrime;
+    }
+}
+
+void FingerprintUint64(uint64_t* hash, uint64_t value) {
+    FingerprintBytes(hash, &value, sizeof(value));
+}
+
+void FingerprintString(uint64_t* hash, std::string_view value) {
+    FingerprintUint64(hash, value.size());
+    if (!value.empty()) {
+        FingerprintBytes(hash, value.data(), value.size());
+    }
+}
+
+std::vector<std::string> SortedStringsFromSet(const std::unordered_set<std::string>& values) {
+    std::vector<std::string> sorted(values.begin(), values.end());
+    std::sort(sorted.begin(), sorted.end());
+    return sorted;
+}
+
+uint64_t ComputeCompiledHideRuleFingerprint(const CompiledHideRule& rule) {
+    uint64_t hash = kFingerprintOffsetBasis;
+    FingerprintUint64(&hash, rule.enableHideAllRootEntries ? 1ULL : 0ULL);
+    const auto sortedExemptions = SortedStringsFromSet(rule.hideAllRootEntriesExemptionSet);
+    FingerprintUint64(&hash, sortedExemptions.size());
+    for (const auto& value : sortedExemptions) {
+        FingerprintString(&hash, value);
+    }
+
+    const auto sortedRootNames = SortedStringsFromSet(rule.hiddenRootEntryNameSet);
+    FingerprintUint64(&hash, sortedRootNames.size());
+    for (const auto& value : sortedRootNames) {
+        FingerprintString(&hash, value);
+    }
+
+    const auto sortedRelativePaths =
+        SortedStringsFromSet(rule.normalizedHiddenRelativePathExactSet);
+    FingerprintUint64(&hash, sortedRelativePaths.size());
+    for (const auto& value : sortedRelativePaths) {
+        FingerprintString(&hash, value);
+    }
+    return hash != 0 ? hash : 1;
+}
+
+// Materialize the exact-match sets and prefix lists once per resolved rule so the hot policy path
+// does not repeat normalization and linear scans.
+std::shared_ptr<const CompiledHideRule> BuildCompiledHideRule(
+    const CompiledHideRuleBuilder& builder) {
+    if (!RuleHasTargets(builder)) {
+        return nullptr;
+    }
+
+    auto compiled = std::make_shared<CompiledHideRule>();
+    compiled->enableHideAllRootEntries = builder.enableHideAllRootEntries;
+    compiled->hideAllRootEntriesExemptions = builder.hideAllRootEntriesExemptions;
+    compiled->hiddenRootEntryNames = builder.hiddenRootEntryNames;
+    compiled->hiddenRelativePaths = builder.hiddenRelativePaths;
+
+    for (const auto& exemptEntry : compiled->hideAllRootEntriesExemptions) {
+        const std::string canonicalExemptEntry = CanonicalizeHiddenEntryNameForMatch(exemptEntry);
+        if (!canonicalExemptEntry.empty()) {
+            compiled->hideAllRootEntriesExemptionSet.insert(canonicalExemptEntry);
+        }
+    }
+    for (const auto& rootEntryName : compiled->hiddenRootEntryNames) {
+        const std::string canonicalRootEntryName =
+            CanonicalizeHiddenEntryNameForMatch(rootEntryName);
+        if (!canonicalRootEntryName.empty()) {
+            compiled->hiddenRootEntryNameSet.insert(canonicalRootEntryName);
+        }
+    }
+    for (const auto& hiddenRelativePath : compiled->hiddenRelativePaths) {
+        const std::string canonicalHiddenRelativePath =
+            CanonicalizeRelativeHiddenPathForMatch(hiddenRelativePath);
+        if (canonicalHiddenRelativePath.empty()) {
+            continue;
+        }
+        compiled->normalizedHiddenRelativePathExactSet.insert(canonicalHiddenRelativePath);
+        compiled->normalizedHiddenRelativePathPrefixes.push_back(canonicalHiddenRelativePath + "/");
+        const size_t slash = canonicalHiddenRelativePath.find('/');
+        const std::string_view firstComponent =
+            slash == std::string::npos
+                ? std::string_view(canonicalHiddenRelativePath)
+                : std::string_view(canonicalHiddenRelativePath).substr(0, slash);
+        if (!firstComponent.empty()) {
+            compiled->hiddenRelativePathFirstComponentSet.emplace(firstComponent);
+        }
+        const size_t lastSlash = canonicalHiddenRelativePath.rfind('/');
+        if (lastSlash != std::string::npos) {
+            compiled->exactHiddenTargetParentRelativePathSet.emplace(
+                canonicalHiddenRelativePath.substr(0, lastSlash));
+        }
+    }
+    compiled->fingerprint = ComputeCompiledHideRuleFingerprint(*compiled);
+    return compiled;
+}
+
+CompiledHideConfig BuildCompiledHideConfig(const HideConfig& config) {
+    CompiledHideConfig compiledConfig;
+
+    CompiledHideRuleBuilder globalBuilder;
+    MergeGlobalRule(config, &globalBuilder);
+    compiledConfig.globalRuleFragment = BuildCompiledHideRule(globalBuilder);
+
+    CompiledHideRuleBuilder anyPackageBuilder = globalBuilder;
+    std::unordered_map<std::string, CompiledHideRuleBuilder> packageBuilders;
+    for (const auto& hiddenPackage : config.hiddenPackages) {
+        compiledConfig.hiddenPackageSet.emplace(hiddenPackage);
+    }
+    for (const auto& packageRule : config.packageRules) {
+        MergePackageRule(packageRule, &packageBuilders[packageRule.packageName]);
+        MergePackageRule(packageRule, &anyPackageBuilder);
+    }
+    for (auto& [packageName, builder] : packageBuilders) {
+        if (auto compiledRule = BuildCompiledHideRule(builder); compiledRule != nullptr) {
+            compiledConfig.packageRuleFragments.emplace(packageName, std::move(compiledRule));
+        }
+    }
+    compiledConfig.anyPackageRule = BuildCompiledHideRule(anyPackageBuilder);
+    return compiledConfig;
+}
+
+std::shared_ptr<const CompiledHideConfig> MakeDefaultCompiledHideConfig() {
+    return std::make_shared<const CompiledHideConfig>(BuildCompiledHideConfig(DefaultHideConfig()));
 }
 
 void InvalidateTrackedHideTargetsForCurrentConfig() {
@@ -135,9 +290,30 @@ std::shared_ptr<const HideConfig> CurrentHideConfig() {
     return std::atomic_load_explicit(&gHideConfig, std::memory_order_acquire);
 }
 
+std::shared_ptr<const CompiledHideConfig> CurrentCompiledHideConfig() {
+    auto compiledConfig =
+        std::atomic_load_explicit(&gCompiledHideConfig, std::memory_order_acquire);
+    if (compiledConfig != nullptr) {
+        return compiledConfig;
+    }
+    static std::once_flag initOnce;
+    // ApplyHideConfig() may publish a real config before lazy default init runs, so only install
+    // the default when the shared pointer is still empty.
+    std::call_once(initOnce, []() {
+        if (std::atomic_load_explicit(&gCompiledHideConfig, std::memory_order_acquire) == nullptr) {
+            std::atomic_store_explicit(&gCompiledHideConfig, MakeDefaultCompiledHideConfig(),
+                                       std::memory_order_release);
+        }
+    });
+    return std::atomic_load_explicit(&gCompiledHideConfig, std::memory_order_acquire);
+}
+
 void ApplyHideConfig(HideConfig config) {
     auto next = std::make_shared<const HideConfig>(std::move(config));
-    std::atomic_store_explicit(&gHideConfig, std::move(next), std::memory_order_release);
+    auto compiledNext = std::make_shared<const CompiledHideConfig>(BuildCompiledHideConfig(*next));
+    std::atomic_store_explicit(&gHideConfig, next, std::memory_order_release);
+    std::atomic_store_explicit(&gCompiledHideConfig, std::move(compiledNext),
+                               std::memory_order_release);
     const uint64_t generation = gHideConfigGeneration.fetch_add(1, std::memory_order_acq_rel) + 1;
     {
         std::lock_guard<std::mutex> lock(gUidHideCacheMutex);
@@ -157,40 +333,8 @@ void ApplyHideConfig(HideConfig config) {
                   CurrentHideConfig()->packageRules.size());
 }
 
-bool IsHiddenPackageName(std::string_view packageName) {
-    const auto config = CurrentHideConfig();
-    for (const auto& hiddenPackage : config->hiddenPackages) {
-        if (packageName == hiddenPackage) {
-            return true;
-        }
-    }
-    return false;
-}
-
-std::shared_ptr<const ResolvedHideRule> RuleForAnyPackage() {
-    static std::mutex cacheMutex;
-    static std::shared_ptr<const HideConfig> cachedConfig;
-    static std::shared_ptr<const ResolvedHideRule> cachedRule;
-    static uint64_t cachedGeneration = 0;
-
-    const auto config = CurrentHideConfig();
-    const uint64_t generation = gHideConfigGeneration.load(std::memory_order_acquire);
-    std::lock_guard<std::mutex> lock(cacheMutex);
-    if (cachedConfig == config && cachedGeneration == generation) {
-        return cachedRule;
-    }
-
-    ResolvedHideRule merged;
-    MergeGlobalRule(*config, &merged);
-    for (const auto& packageRule : config->packageRules) {
-        MergePackageRule(packageRule, &merged);
-    }
-    cachedConfig = config;
-    cachedGeneration = generation;
-    cachedRule = RuleHasTargets(merged)
-                     ? std::make_shared<const ResolvedHideRule>(std::move(merged))
-                     : nullptr;
-    return cachedRule;
+std::shared_ptr<const CompiledHideRule> RuleForAnyPackage() {
+    return CurrentCompiledHideConfig()->anyPackageRule;
 }
 
 namespace {
@@ -228,13 +372,15 @@ JNIEnv* GetJniEnv(bool* didAttach) {
 
 }  // namespace
 
-std::shared_ptr<const ResolvedHideRule> ResolveHideRuleForUid(uint32_t uid) {
-    const uint64_t generation = gHideConfigGeneration.load(std::memory_order_acquire);
+std::shared_ptr<const CompiledHideRule> ResolveHideRuleForUid(uint32_t uid) {
+    const uint64_t configGeneration = gHideConfigGeneration.load(std::memory_order_acquire);
+    const uint64_t packageSetGeneration = gUidPackageSetGeneration.load(std::memory_order_acquire);
     {
         std::lock_guard<std::mutex> lock(gUidHideCacheMutex);
         const auto it = gUidHideRuleCache.find(uid);
         if (it != gUidHideRuleCache.end()) {
-            if (it->second.configGeneration == generation) {
+            if (it->second.configGeneration == configGeneration &&
+                it->second.packageSetGeneration == packageSetGeneration) {
                 return it->second.rule;
             }
             gUidHideRuleCache.erase(it);
@@ -247,15 +393,17 @@ std::shared_ptr<const ResolvedHideRule> ResolveHideRuleForUid(uint32_t uid) {
     }
     {
         std::lock_guard<std::mutex> lock(gUidHideCacheMutex);
-        if (gHideConfigGeneration.load(std::memory_order_acquire) == generation) {
-            gUidHideRuleCache[uid] = UidHideRuleCacheEntry{generation, *resolved};
+        if (gHideConfigGeneration.load(std::memory_order_acquire) == configGeneration &&
+            gUidPackageSetGeneration.load(std::memory_order_acquire) == packageSetGeneration) {
+            gUidHideRuleCache[uid] =
+                UidHideRuleCacheEntry{configGeneration, packageSetGeneration, *resolved};
         }
     }
     return *resolved;
 }
 
 // Query PackageManager once per uid and cache the merged package rule for hot FUSE paths.
-std::optional<std::shared_ptr<const ResolvedHideRule>> ResolveHideRuleForUidWithPackageManager(
+std::optional<std::shared_ptr<const CompiledHideRule>> ResolveHideRuleForUidWithPackageManager(
     uint32_t uid) {
     bool didAttach = false;
     JNIEnv* env = GetJniEnv(&didAttach);
@@ -263,7 +411,7 @@ std::optional<std::shared_ptr<const ResolvedHideRule>> ResolveHideRuleForUidWith
         return std::nullopt;
     }
 
-    auto finish = [&](std::optional<std::shared_ptr<const ResolvedHideRule>> value) {
+    auto finish = [&](std::optional<std::shared_ptr<const CompiledHideRule>> value) {
         if (didAttach) {
             gJavaVm->DetachCurrentThread();
         }
@@ -336,10 +484,12 @@ std::optional<std::shared_ptr<const ResolvedHideRule>> ResolveHideRuleForUidWith
     env->DeleteLocalRef(packageManagerClass);
     env->DeleteLocalRef(packageManager);
 
-    auto merged = std::make_unique<ResolvedHideRule>();
-    const auto config = CurrentHideConfig();
+    CompiledHideRuleBuilder merged;
+    const auto compiledConfig = CurrentCompiledHideConfig();
+    std::vector<std::string> packageNames;
     if (packages != nullptr) {
         const jsize count = env->GetArrayLength(packages);
+        packageNames.reserve(static_cast<size_t>(count));
         for (jsize i = 0; i < count; ++i) {
             jstring packageName = static_cast<jstring>(env->GetObjectArrayElement(packages, i));
             if (packageName == nullptr) {
@@ -347,29 +497,86 @@ std::optional<std::shared_ptr<const ResolvedHideRule>> ResolveHideRuleForUidWith
             }
             const char* packageNameChars = env->GetStringUTFChars(packageName, nullptr);
             if (packageNameChars != nullptr) {
-                const std::string_view packageNameView(packageNameChars);
-                if (IsHiddenPackageName(packageNameView)) {
-                    MergeGlobalRule(*config, merged.get());
-                }
-                for (const auto& packageRule : config->packageRules) {
-                    if (packageNameView == packageRule.packageName) {
-                        MergePackageRule(packageRule, merged.get());
-                    }
-                }
+                packageNames.emplace_back(packageNameChars);
                 env->ReleaseStringUTFChars(packageName, packageNameChars);
             }
             env->DeleteLocalRef(packageName);
         }
         env->DeleteLocalRef(packages);
     }
-    if (!RuleHasTargets(*merged)) {
-        DebugLogPrint(4, "resolved uid=%u hide=0", static_cast<unsigned>(uid));
-        return finish(std::shared_ptr<const ResolvedHideRule>(nullptr));
+
+    // PackageManager order is not stable. Canonicalize the uid package set first so equivalent
+    // inputs compile the same merged rule and fingerprint.
+    std::sort(packageNames.begin(), packageNames.end());
+    packageNames.erase(std::unique(packageNames.begin(), packageNames.end()), packageNames.end());
+    for (const auto& packageName : packageNames) {
+        if (compiledConfig->hiddenPackageSet.find(packageName) !=
+                compiledConfig->hiddenPackageSet.end() &&
+            compiledConfig->globalRuleFragment != nullptr) {
+            merged.enableHideAllRootEntries =
+                merged.enableHideAllRootEntries ||
+                compiledConfig->globalRuleFragment->enableHideAllRootEntries;
+            AppendUnique(&merged.hideAllRootEntriesExemptions,
+                         compiledConfig->globalRuleFragment->hideAllRootEntriesExemptions);
+            AppendUnique(&merged.hiddenRootEntryNames,
+                         compiledConfig->globalRuleFragment->hiddenRootEntryNames);
+            AppendUnique(&merged.hiddenRelativePaths,
+                         compiledConfig->globalRuleFragment->hiddenRelativePaths);
+        }
+        const auto fragmentIt = compiledConfig->packageRuleFragments.find(packageName);
+        if (fragmentIt != compiledConfig->packageRuleFragments.end() &&
+            fragmentIt->second != nullptr) {
+            AppendUnique(&merged.hiddenRootEntryNames, fragmentIt->second->hiddenRootEntryNames);
+            AppendUnique(&merged.hiddenRelativePaths, fragmentIt->second->hiddenRelativePaths);
+        }
     }
+
+    if (!RuleHasTargets(merged)) {
+        DebugLogPrint(4, "resolved uid=%u hide=0", static_cast<unsigned>(uid));
+        return finish(std::shared_ptr<const CompiledHideRule>(nullptr));
+    }
+    auto compiledRule = BuildCompiledHideRule(merged);
     DebugLogPrint(4, "resolved uid=%u hide=1 roots=%zu rel=%zu hide_all=%d",
-                  static_cast<unsigned>(uid), merged->hiddenRootEntryNames.size(),
-                  merged->hiddenRelativePaths.size(), merged->enableHideAllRootEntries ? 1 : 0);
-    return finish(std::shared_ptr<const ResolvedHideRule>(merged.release()));
+                  static_cast<unsigned>(uid), compiledRule->hiddenRootEntryNames.size(),
+                  compiledRule->hiddenRelativePaths.size(),
+                  compiledRule->enableHideAllRootEntries ? 1 : 0);
+    return finish(compiledRule);
+}
+
+// Package add/remove can change the effective hide rule for an already-seen uid even when the
+// serialized HideConfig stays the same, so invalidate every uid-derived cache on this edge.
+void NotifyUidRulePackageSetChanged(std::string_view reason) {
+    const uint64_t generation =
+        gUidPackageSetGeneration.fetch_add(1, std::memory_order_acq_rel) + 1;
+    {
+        std::lock_guard<std::mutex> lock(gUidHideCacheMutex);
+        gUidHideRuleCache.clear();
+    }
+    ClearRootSnapshotCache();
+    ClearHiddenPathClassificationCache();
+    InvalidateTrackedHideTargetsForCurrentConfig();
+    DebugLogPrint(4, "invalidated uid hide rules reason=%s package_generation=%llu",
+                  DebugPreview(reason).c_str(), static_cast<unsigned long long>(generation));
+}
+
+uint64_t EffectiveHideRuleFingerprint(const std::shared_ptr<const CompiledHideRule>& rule) {
+    return rule != nullptr ? rule->fingerprint : 0;
+}
+
+// fingerprint only selects a cache bucket. Semantic equality turns the rare collision case into a
+// cache miss instead of reusing a root snapshot built for different hide semantics.
+bool CompiledHideRulesSemanticallyEqual(const std::shared_ptr<const CompiledHideRule>& lhs,
+                                        const std::shared_ptr<const CompiledHideRule>& rhs) {
+    if (lhs == rhs) {
+        return true;
+    }
+    if (lhs == nullptr || rhs == nullptr) {
+        return false;
+    }
+    return lhs->enableHideAllRootEntries == rhs->enableHideAllRootEntries &&
+           lhs->hideAllRootEntriesExemptionSet == rhs->hideAllRootEntriesExemptionSet &&
+           lhs->hiddenRootEntryNameSet == rhs->hiddenRootEntryNameSet &&
+           lhs->normalizedHiddenRelativePathExactSet == rhs->normalizedHiddenRelativePathExactSet;
 }
 
 }  // namespace fusehide

@@ -52,29 +52,38 @@ struct HiddenPathClassificationCacheKeyHash {
 
 struct HiddenPathClassificationCacheEntry {
     uint64_t configGeneration = 0;
+    uint64_t packageSetGeneration = 0;
     HiddenPathClassification classification = HiddenPathClassification::kNone;
 };
 
+// MediaProvider root enumeration is uid-sensitive, so root snapshots stay scoped to uid +
+// effective FuseHide rule fingerprint instead of being shared by fingerprint alone.
 struct RootSnapshotCacheKey {
     uint32_t uid = 0;
+    uint64_t fingerprint = 0;
     std::string path;
 
     bool operator==(const RootSnapshotCacheKey& other) const {
-        return uid == other.uid && path == other.path;
+        return uid == other.uid && fingerprint == other.fingerprint && path == other.path;
     }
 };
 
 struct RootSnapshotCacheKeyHash {
     size_t operator()(const RootSnapshotCacheKey& key) const {
         const size_t uidHash = std::hash<uint32_t>{}(key.uid);
+        const size_t fingerprintHash = std::hash<uint64_t>{}(key.fingerprint);
         const size_t pathHash = std::hash<std::string>{}(key.path);
-        return uidHash ^ (pathHash + 0x9e3779b9 + (uidHash << 6) + (uidHash >> 2));
+        const size_t combined =
+            uidHash ^ (fingerprintHash + 0x9e3779b9 + (uidHash << 6) + (uidHash >> 2));
+        return combined ^ (pathHash + 0x9e3779b9 + (combined << 6) + (combined >> 2));
     }
 };
 
 struct RootSnapshotCacheEntry {
     uint64_t configGeneration = 0;
+    uint64_t packageSetGeneration = 0;
     uint64_t parentGeneration = 0;
+    std::shared_ptr<const CompiledHideRule> rule;
     std::shared_ptr<const DirectoryEntries> entries;
 };
 
@@ -183,6 +192,8 @@ const char* HiddenPathClassificationName(HiddenPathClassification classification
     return "unknown";
 }
 
+// lstat/stat/getxattr and the lower-fs fallbacks can repeatedly ask the same question during one
+// request burst. Cache the final classification behind config + package-set generations.
 HiddenPathClassification ClassifyHiddenPath(uint32_t uid, std::string_view path) {
     if (uid == 0 || path.empty()) {
         return HiddenPathClassification::kNone;
@@ -190,19 +201,24 @@ HiddenPathClassification ClassifyHiddenPath(uint32_t uid, std::string_view path)
 
     HiddenPathClassificationCacheKey key{uid, std::string(path)};
     uint64_t generation = 0;
+    uint64_t packageSetGeneration = 0;
     bool staleEntry = false;
     {
         std::lock_guard<std::mutex> lock(gHiddenPathClassificationCacheMutex);
         generation = gHideConfigGeneration.load(std::memory_order_acquire);
+        packageSetGeneration = gUidPackageSetGeneration.load(std::memory_order_acquire);
         const auto it = gHiddenPathClassificationCache.find(key);
         if (it != gHiddenPathClassificationCache.end()) {
-            if (it->second.configGeneration == generation) {
+            if (it->second.configGeneration == generation &&
+                it->second.packageSetGeneration == packageSetGeneration) {
                 if (IsPathUnderVisibleRoot(path)) {
                     DebugLogPrint(4,
-                                  "cache hidden_path hit uid=%u path=%s class=%s generation=%llu",
+                                  "cache hidden_path hit uid=%u path=%s class=%s generation=%llu "
+                                  "package_generation=%llu",
                                   static_cast<unsigned>(uid), DebugPreview(path).c_str(),
                                   HiddenPathClassificationName(it->second.classification),
-                                  static_cast<unsigned long long>(generation));
+                                  static_cast<unsigned long long>(generation),
+                                  static_cast<unsigned long long>(packageSetGeneration));
                 }
                 return it->second.classification;
             }
@@ -211,25 +227,33 @@ HiddenPathClassification ClassifyHiddenPath(uint32_t uid, std::string_view path)
         }
     }
     if (IsPathUnderVisibleRoot(path)) {
-        DebugLogPrint(4, "cache hidden_path miss uid=%u path=%s reason=%s generation=%llu",
+        DebugLogPrint(4,
+                      "cache hidden_path miss uid=%u path=%s reason=%s generation=%llu "
+                      "package_generation=%llu",
                       static_cast<unsigned>(uid), DebugPreview(path).c_str(),
-                      staleEntry ? "stale" : "empty", static_cast<unsigned long long>(generation));
+                      staleEntry ? "stale" : "empty", static_cast<unsigned long long>(generation),
+                      static_cast<unsigned long long>(packageSetGeneration));
     }
 
     const HiddenPathClassification classification = ComputeHiddenPathClassification(uid, path);
     {
         std::lock_guard<std::mutex> lock(gHiddenPathClassificationCacheMutex);
-        if (gHideConfigGeneration.load(std::memory_order_acquire) == generation) {
+        if (gHideConfigGeneration.load(std::memory_order_acquire) == generation &&
+            gUidPackageSetGeneration.load(std::memory_order_acquire) == packageSetGeneration) {
             if (gHiddenPathClassificationCache.size() >= kMaxHiddenPathClassificationCacheEntries) {
                 gHiddenPathClassificationCache.clear();
             }
             gHiddenPathClassificationCache.insert_or_assign(
-                std::move(key), HiddenPathClassificationCacheEntry{generation, classification});
+                std::move(key), HiddenPathClassificationCacheEntry{generation, packageSetGeneration,
+                                                                   classification});
             if (IsPathUnderVisibleRoot(path)) {
-                DebugLogPrint(4, "cache hidden_path store uid=%u path=%s class=%s generation=%llu",
+                DebugLogPrint(4,
+                              "cache hidden_path store uid=%u path=%s class=%s generation=%llu "
+                              "package_generation=%llu",
                               static_cast<unsigned>(uid), DebugPreview(path).c_str(),
                               HiddenPathClassificationName(classification),
-                              static_cast<unsigned long long>(generation));
+                              static_cast<unsigned long long>(generation),
+                              static_cast<unsigned long long>(packageSetGeneration));
             }
         }
     }
@@ -256,73 +280,101 @@ DirectoryEntries CloneDirectoryEntries(const DirectoryEntries& entries) {
     return DirectoryEntries(entries.begin(), entries.end());
 }
 
-std::optional<DirectoryEntries> LookupRootSnapshotCache(uint32_t uid, std::string_view path) {
+std::optional<DirectoryEntries> LookupRootSnapshotCache(
+    uint32_t uid, std::string_view path, const std::shared_ptr<const CompiledHideRule>& rule) {
     const std::string canonicalPath = CanonicalRootSnapshotPath(path);
     if (canonicalPath.empty()) {
         return std::nullopt;
     }
 
-    const RootSnapshotCacheKey key{uid, canonicalPath};
+    const uint64_t fingerprint = EffectiveHideRuleFingerprint(rule);
+    const RootSnapshotCacheKey key{uid, fingerprint, canonicalPath};
     std::lock_guard<std::mutex> lock(gRootSnapshotCacheMutex);
     const uint64_t configGeneration = gHideConfigGeneration.load(std::memory_order_acquire);
+    const uint64_t packageSetGeneration = gUidPackageSetGeneration.load(std::memory_order_acquire);
     const uint64_t parentGeneration = gRootSnapshotParentGeneration.load(std::memory_order_acquire);
     const auto it = gRootSnapshotCache.find(key);
     if (it == gRootSnapshotCache.end()) {
         DebugLogPrint(4,
-                      "cache root_snapshot miss uid=%u path=%s reason=empty generation=%llu "
-                      "parent_generation=%llu",
+                      "cache root_snapshot miss uid=%u path=%s fingerprint=%llu reason=empty "
+                      "generation=%llu package_generation=%llu parent_generation=%llu",
                       static_cast<unsigned>(uid), DebugPreview(canonicalPath).c_str(),
+                      static_cast<unsigned long long>(fingerprint),
                       static_cast<unsigned long long>(configGeneration),
+                      static_cast<unsigned long long>(packageSetGeneration),
                       static_cast<unsigned long long>(parentGeneration));
         return std::nullopt;
     }
     if (it->second.configGeneration != configGeneration ||
+        it->second.packageSetGeneration != packageSetGeneration ||
         it->second.parentGeneration != parentGeneration || it->second.entries == nullptr) {
         DebugLogPrint(4,
-                      "cache root_snapshot miss uid=%u path=%s reason=stale cached_generation=%llu "
-                      "live_generation=%llu cached_parent_generation=%llu "
-                      "live_parent_generation=%llu",
+                      "cache root_snapshot miss uid=%u path=%s fingerprint=%llu reason=stale "
+                      "cached_generation=%llu live_generation=%llu "
+                      "cached_package_generation=%llu live_package_generation=%llu "
+                      "cached_parent_generation=%llu live_parent_generation=%llu",
                       static_cast<unsigned>(uid), DebugPreview(canonicalPath).c_str(),
+                      static_cast<unsigned long long>(fingerprint),
                       static_cast<unsigned long long>(it->second.configGeneration),
                       static_cast<unsigned long long>(configGeneration),
+                      static_cast<unsigned long long>(it->second.packageSetGeneration),
+                      static_cast<unsigned long long>(packageSetGeneration),
                       static_cast<unsigned long long>(it->second.parentGeneration),
                       static_cast<unsigned long long>(parentGeneration));
         gRootSnapshotCache.erase(it);
         return std::nullopt;
     }
+    if (!CompiledHideRulesSemanticallyEqual(rule, it->second.rule)) {
+        DebugLogPrint(4,
+                      "cache root_snapshot miss uid=%u path=%s fingerprint=%llu reason=collision",
+                      static_cast<unsigned>(uid), DebugPreview(canonicalPath).c_str(),
+                      static_cast<unsigned long long>(fingerprint));
+        return std::nullopt;
+    }
     DebugLogPrint(4,
-                  "cache root_snapshot hit uid=%u path=%s entries=%zu generation=%llu "
-                  "parent_generation=%llu",
+                  "cache root_snapshot hit uid=%u path=%s fingerprint=%llu entries=%zu "
+                  "generation=%llu package_generation=%llu parent_generation=%llu",
                   static_cast<unsigned>(uid), DebugPreview(canonicalPath).c_str(),
-                  it->second.entries->size(), static_cast<unsigned long long>(configGeneration),
+                  static_cast<unsigned long long>(fingerprint), it->second.entries->size(),
+                  static_cast<unsigned long long>(configGeneration),
+                  static_cast<unsigned long long>(packageSetGeneration),
                   static_cast<unsigned long long>(parentGeneration));
     return CloneDirectoryEntries(*it->second.entries);
 }
 
 void MaybeStoreRootSnapshotCache(uint32_t uid, std::string_view path,
+                                 const std::shared_ptr<const CompiledHideRule>& rule,
                                  const DirectoryEntries& entries) {
     const std::string canonicalPath = CanonicalRootSnapshotPath(path);
     if (canonicalPath.empty() || !CanCacheRootSnapshotEntries(entries)) {
         return;
     }
 
+    const uint64_t fingerprint = EffectiveHideRuleFingerprint(rule);
     const uint64_t configGeneration = gHideConfigGeneration.load(std::memory_order_acquire);
+    const uint64_t packageSetGeneration = gUidPackageSetGeneration.load(std::memory_order_acquire);
     const uint64_t parentGeneration = gRootSnapshotParentGeneration.load(std::memory_order_acquire);
     auto snapshot = std::make_shared<const DirectoryEntries>(CloneDirectoryEntries(entries));
 
     std::lock_guard<std::mutex> lock(gRootSnapshotCacheMutex);
+    // Recheck all generations after the expensive directory read/filter work so a concurrent rule
+    // or root mutation change becomes a miss instead of storing stale filtered entries.
     if (gHideConfigGeneration.load(std::memory_order_acquire) != configGeneration ||
+        gUidPackageSetGeneration.load(std::memory_order_acquire) != packageSetGeneration ||
         gRootSnapshotParentGeneration.load(std::memory_order_acquire) != parentGeneration) {
         return;
     }
     gRootSnapshotCache.insert_or_assign(
-        RootSnapshotCacheKey{uid, canonicalPath},
-        RootSnapshotCacheEntry{configGeneration, parentGeneration, std::move(snapshot)});
+        RootSnapshotCacheKey{uid, fingerprint, canonicalPath},
+        RootSnapshotCacheEntry{configGeneration, packageSetGeneration, parentGeneration, rule,
+                               std::move(snapshot)});
     DebugLogPrint(4,
-                  "cache root_snapshot store uid=%u path=%s entries=%zu generation=%llu "
-                  "parent_generation=%llu",
-                  static_cast<unsigned>(uid), DebugPreview(canonicalPath).c_str(), entries.size(),
+                  "cache root_snapshot store uid=%u path=%s fingerprint=%llu entries=%zu "
+                  "generation=%llu package_generation=%llu parent_generation=%llu",
+                  static_cast<unsigned>(uid), DebugPreview(canonicalPath).c_str(),
+                  static_cast<unsigned long long>(fingerprint), entries.size(),
                   static_cast<unsigned long long>(configGeneration),
+                  static_cast<unsigned long long>(packageSetGeneration),
                   static_cast<unsigned long long>(parentGeneration));
 }
 
@@ -337,6 +389,8 @@ void BumpRootSnapshotParentGeneration(const char* reason) {
                   static_cast<unsigned long long>(generation));
 }
 
+// FUSE mutation handlers run before the final reply is known. Defer root snapshot invalidation
+// until reply_err sees a successful completion so failed operations keep the old snapshot alive.
 void TrackPendingRootSnapshotMutation(fuse_req_t req, const char* opName) {
     if (req == nullptr) {
         return;
@@ -396,26 +450,8 @@ bool IsFirstComponentOfHiddenRelativePath(uint32_t uid, std::string_view name) {
     if (rule == nullptr) {
         return false;
     }
-    for (const auto& hiddenRelativePath : rule->hiddenRelativePaths) {
-        std::string normalized = hiddenRelativePath;
-        while (!normalized.empty() && normalized.front() == '/') {
-            normalized.erase(normalized.begin());
-        }
-        while (!normalized.empty() && normalized.back() == '/') {
-            normalized.pop_back();
-        }
-        if (normalized.empty()) {
-            continue;
-        }
-        const size_t slash = normalized.find('/');
-        const std::string_view first = slash == std::string::npos
-                                           ? std::string_view(normalized)
-                                           : std::string_view(normalized).substr(0, slash);
-        if (first == name) {
-            return true;
-        }
-    }
-    return false;
+    return rule->hiddenRelativePathFirstComponentSet.find(CanonicalizeHiddenEntryNameForMatch(
+               name)) != rule->hiddenRelativePathFirstComponentSet.end();
 }
 
 void InvalidateFilteredParentChildren(std::string_view parentPath,
@@ -522,6 +558,10 @@ DirectoryEntries WrappedGetDirectoryEntries(void* wrapper, uint32_t uid, AbiStri
                                             DIR* dirp) {
     auto fn = reinterpret_cast<GetDirectoryEntriesFn>(gOriginalGetDirectoryEntries);
     const std::string path(AbiStringView(pathArg));
+    // Cache only the already-filtered visible root listing. Nested directories still rely on the
+    // normal tracked-path invalidation path because their visibility is not just a root child set.
+    const std::shared_ptr<const CompiledHideRule> rule =
+        IsVisibleRootPath(path) ? ResolveHideRuleForUid(uid) : nullptr;
     if (gCurrentReaddirReqUnique != 0) {
         std::lock_guard<std::mutex> lock(gPendingReaddirContextsMutex);
         auto it = gPendingReaddirContexts.find(gCurrentReaddirReqUnique);
@@ -537,7 +577,8 @@ DirectoryEntries WrappedGetDirectoryEntries(void* wrapper, uint32_t uid, AbiStri
     }
 
     if (dirp != nullptr) {
-        if (auto cachedEntries = LookupRootSnapshotCache(uid, path); cachedEntries.has_value()) {
+        if (auto cachedEntries = LookupRootSnapshotCache(uid, path, rule);
+            cachedEntries.has_value()) {
             return std::move(*cachedEntries);
         }
     }
@@ -545,7 +586,7 @@ DirectoryEntries WrappedGetDirectoryEntries(void* wrapper, uint32_t uid, AbiStri
     DirectoryEntries entries = fn ? fn(wrapper, uid, pathArg, dirp) : DirectoryEntries();
     entries = FilterHiddenDirectoryEntries(uid, path, std::move(entries));
     if (dirp != nullptr && fn != nullptr) {
-        MaybeStoreRootSnapshotCache(uid, path, entries);
+        MaybeStoreRootSnapshotCache(uid, path, rule, entries);
     }
     return entries;
 }
@@ -1265,6 +1306,8 @@ extern "C" int WrappedReplyBuf(fuse_req_t req, const char* buf, size_t size) {
 
 extern "C" int WrappedReplyErr(fuse_req_t req, int err) {
     auto fn = ReplyErrorBridge::Original();
+    // Root mutations are tracked when the request is issued, but the snapshot must only be bumped
+    // after the kernel-visible reply succeeds.
     const auto pendingRootMutation = TakePendingRootSnapshotMutation(req);
     if (req != nullptr) {
         std::lock_guard<std::mutex> lock(gPendingReaddirContextsMutex);

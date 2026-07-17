@@ -18,13 +18,16 @@ namespace fusehide {
 
 namespace {
 
-bool HasNonAsciiByte(std::string_view value) {
-    for (unsigned char ch : value) {
-        if ((ch & 0x80u) != 0) {
-            return true;
+void FoldAsciiForMatch(std::string* value) {
+    if (value == nullptr) {
+        return;
+    }
+    for (char& ch : *value) {
+        const auto byte = static_cast<unsigned char>(ch);
+        if (byte < 0x80u) {
+            ch = static_cast<char>(std::tolower(byte));
         }
     }
-    return false;
 }
 
 }  // namespace
@@ -56,6 +59,23 @@ std::string NormalizeRelativeHiddenPath(std::string_view path) {
     return normalized;
 }
 
+std::string CanonicalizeHiddenEntryNameForMatch(std::string_view name) {
+    std::string canonical(name);
+    UnicodePolicy::RewriteString(canonical);
+    FoldAsciiForMatch(&canonical);
+    return canonical;
+}
+
+std::string CanonicalizeRelativeHiddenPathForMatch(std::string_view path) {
+    std::string canonical = NormalizeRelativeHiddenPath(path);
+    if (canonical.empty()) {
+        return canonical;
+    }
+    UnicodePolicy::RewriteString(canonical);
+    FoldAsciiForMatch(&canonical);
+    return canonical;
+}
+
 std::optional<std::string> RelativePathForVisibleRoot(std::string_view path) {
     for (const auto& root : kVisibleStorageRoots) {
         if (path == root) {
@@ -69,24 +89,24 @@ std::optional<std::string> RelativePathForVisibleRoot(std::string_view path) {
     return std::nullopt;
 }
 
-bool MatchesRelativeHiddenPathList(const ResolvedHideRule& rule, std::string_view relativePath,
+// Subtree checks are hot enough that the compiled rule keeps both exact and prefix forms ready,
+// leaving this helper to normalize only the runtime path being tested.
+bool MatchesRelativeHiddenPathList(const CompiledHideRule& rule, std::string_view relativePath,
                                    bool exactOnly) {
-    const std::string normalized = NormalizeRelativeHiddenPath(relativePath);
+    const std::string normalized = CanonicalizeRelativeHiddenPathForMatch(relativePath);
     if (normalized.empty()) {
         return false;
     }
-    for (const auto& configuredPath : rule.hiddenRelativePaths) {
-        const std::string candidate = NormalizeRelativeHiddenPath(configuredPath);
-        if (candidate.empty()) {
-            continue;
-        }
-        if (normalized == candidate) {
-            return true;
-        }
-        if (!exactOnly && normalized.size() > candidate.size() &&
-            normalized.compare(0, candidate.size(), candidate) == 0 &&
-            normalized[candidate.size()] == '/') {
-            return true;
+    if (rule.normalizedHiddenRelativePathExactSet.find(normalized) !=
+        rule.normalizedHiddenRelativePathExactSet.end()) {
+        return true;
+    }
+    if (!exactOnly) {
+        for (const auto& prefix : rule.normalizedHiddenRelativePathPrefixes) {
+            if (normalized.size() > prefix.size() &&
+                normalized.compare(0, prefix.size(), prefix) == 0) {
+                return true;
+            }
         }
     }
     return false;
@@ -97,19 +117,15 @@ bool MatchesRelativeHiddenPathList(std::string_view relativePath, bool exactOnly
     return rule != nullptr && MatchesRelativeHiddenPathList(*rule, relativePath, exactOnly);
 }
 
-bool IsWildcardRootEntryCandidate(const ResolvedHideRule& rule, std::string_view name) {
+bool IsWildcardRootEntryCandidate(const CompiledHideRule& rule, std::string_view name) {
     if (name.empty() || name == "." || name == "..") {
         return false;
     }
     if (name.find('/') != std::string_view::npos) {
         return false;
     }
-    for (const auto& exemptEntry : rule.hideAllRootEntriesExemptions) {
-        if (name == exemptEntry) {
-            return false;
-        }
-    }
-    return true;
+    return rule.hideAllRootEntriesExemptionSet.find(CanonicalizeHiddenEntryNameForMatch(name)) ==
+           rule.hideAllRootEntriesExemptionSet.end();
 }
 
 bool IsWildcardRootEntryCandidate(std::string_view name) {
@@ -126,37 +142,19 @@ bool ShouldHideWildcardRootEntryByParent(uint64_t parent, uint64_t rootParent,
 
 namespace {
 
-bool IsConfiguredHiddenRootEntryNameForRule(const ResolvedHideRule& rule, std::string_view name) {
-    for (const auto& rootEntryName : rule.hiddenRootEntryNames) {
-        if (name == rootEntryName) {
-            return true;
-        }
-    }
-
-    if (!HasNonAsciiByte(name)) {
-        return false;
-    }
-
-    std::string sanitized(name);
-    if (!UnicodePolicy::NeedsSanitization(sanitized)) {
-        return false;
-    }
-    UnicodePolicy::RewriteString(sanitized);
-
-    for (const auto& rootEntryName : rule.hiddenRootEntryNames) {
-        if (sanitized == rootEntryName) {
-            return true;
-        }
-    }
-    return false;
+// Fold runtime names the same way the device's case-insensitive compare path does so root entry
+// lookup, stat/open, and descendant filtering agree on the same hidden target.
+bool IsConfiguredHiddenRootEntryNameForRule(const CompiledHideRule& rule, std::string_view name) {
+    return rule.hiddenRootEntryNameSet.find(CanonicalizeHiddenEntryNameForMatch(name)) !=
+           rule.hiddenRootEntryNameSet.end();
 }
 
-bool IsHiddenRootEntryNameForRule(const ResolvedHideRule& rule, std::string_view name) {
+bool IsHiddenRootEntryNameForRule(const CompiledHideRule& rule, std::string_view name) {
     return IsConfiguredHiddenRootEntryNameForRule(rule, name) ||
            (rule.enableHideAllRootEntries && IsWildcardRootEntryCandidate(rule, name));
 }
 
-bool IsAnyHiddenSubtreePathForRule(const ResolvedHideRule& rule, std::string_view path) {
+bool IsAnyHiddenSubtreePathForRule(const CompiledHideRule& rule, std::string_view path) {
     if (const auto relativePath = RelativePathForVisibleRoot(path);
         relativePath.has_value() && MatchesRelativeHiddenPathList(rule, *relativePath, false)) {
         return true;
@@ -183,7 +181,7 @@ bool IsAnyHiddenSubtreePathForRule(const ResolvedHideRule& rule, std::string_vie
     return false;
 }
 
-bool IsExactHiddenTargetPathForRule(const ResolvedHideRule& rule, std::string_view path) {
+bool IsExactHiddenTargetPathForRule(const CompiledHideRule& rule, std::string_view path) {
     if (const auto relativePath = RelativePathForVisibleRoot(path);
         relativePath.has_value() && MatchesRelativeHiddenPathList(rule, *relativePath, true)) {
         return true;
@@ -208,7 +206,7 @@ bool IsExactHiddenTargetPathForRule(const ResolvedHideRule& rule, std::string_vi
     return false;
 }
 
-bool IsParentOfExactHiddenTargetPathForRule(const ResolvedHideRule& rule, std::string_view path) {
+bool IsParentOfExactHiddenTargetPathForRule(const CompiledHideRule& rule, std::string_view path) {
     // Root targets and nested relative targets need different list filtering keys. Root-level
     // targets can be recognized by child name alone under /storage/emulated/0, but nested targets
     // need the exact visible parent path so reply_buf can rebuild parentPath + childName.
@@ -222,21 +220,8 @@ bool IsParentOfExactHiddenTargetPathForRule(const ResolvedHideRule& rule, std::s
     if (!relativePath.has_value()) {
         return false;
     }
-
-    for (const auto& hiddenRelativePath : rule.hiddenRelativePaths) {
-        const std::string normalized = NormalizeRelativeHiddenPath(hiddenRelativePath);
-        if (normalized.empty()) {
-            continue;
-        }
-        const size_t slash = normalized.rfind('/');
-        if (slash == std::string::npos) {
-            continue;
-        }
-        if (*relativePath == normalized.substr(0, slash)) {
-            return true;
-        }
-    }
-    return false;
+    return rule.exactHiddenTargetParentRelativePathSet.find(CanonicalizeRelativeHiddenPathForMatch(
+               *relativePath)) != rule.exactHiddenTargetParentRelativePathSet.end();
 }
 
 }  // namespace

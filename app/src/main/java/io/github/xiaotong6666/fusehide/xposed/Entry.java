@@ -355,6 +355,38 @@ public class Entry extends XposedModule {
                         app, systemStateReceiver, systemFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
             }
 
+            // The native uid-rule caches depend on PackageManager's package set, not only on the
+            // serialized hide config pushed through the provider.
+            BroadcastReceiver packageStateReceiver = new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    final String action = intent != null ? intent.getAction() : null;
+                    if (action == null) {
+                        return;
+                    }
+                    // Package replacement emits remove/add pairs for the same app. Skip that churn
+                    // and only invalidate when the uid-visible package set really changes.
+                    if (intent.getBooleanExtra(Intent.EXTRA_REPLACING, false)) {
+                        return;
+                    }
+                    final String pkg =
+                            intent.getData() != null ? intent.getData().getSchemeSpecificPart() : null;
+                    final String reason = pkg == null ? action : action + ":" + pkg;
+                    HideConfigNativeBridge.notifyPackageSetChanged(reason);
+                    Log.d("FuseHide", "package set changed reason=" + reason);
+                }
+            };
+            IntentFilter packageFilter = new IntentFilter();
+            packageFilter.addAction(Intent.ACTION_PACKAGE_ADDED);
+            packageFilter.addAction(Intent.ACTION_PACKAGE_REMOVED);
+            packageFilter.addDataScheme("package");
+            if (Build.VERSION.SDK_INT >= 33) {
+                app.registerReceiver(packageStateReceiver, packageFilter, Context.RECEIVER_NOT_EXPORTED);
+            } else {
+                ContextCompat.registerReceiver(
+                        app, packageStateReceiver, packageFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+            }
+
             startConfigReload("initial");
             Log.d("FuseHide", "registered");
         } catch (Throwable th) {

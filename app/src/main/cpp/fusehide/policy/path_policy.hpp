@@ -37,6 +37,8 @@ class HiddenPathPolicy final {
 };
 
 std::string NormalizeRelativeHiddenPath(std::string_view path);
+std::string CanonicalizeHiddenEntryNameForMatch(std::string_view name);
+std::string CanonicalizeRelativeHiddenPathForMatch(std::string_view path);
 std::optional<std::string> RelativePathForVisibleRoot(std::string_view path);
 bool MatchesRelativeHiddenPathList(std::string_view relativePath, bool exactOnly);
 bool IsWildcardRootEntryCandidate(std::string_view name);

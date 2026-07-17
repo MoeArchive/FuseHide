@@ -239,6 +239,25 @@ Java_io_github_xiaotong6666_fusehide_config_HideConfigNativeBridge_applyHideConf
     fusehide::ApplyHideConfig(std::move(config));
 }
 
+// Package add/remove is observed from the injected MediaProvider process and forwarded here so the
+// native uid-rule caches track PackageManager-visible changes without a full config reload.
+JNIEXPORT void JNICALL
+Java_io_github_xiaotong6666_fusehide_config_HideConfigNativeBridge_notifyPackageSetChanged(
+    JNIEnv* env, jclass, jstring reason) {
+    std::string nativeReason;
+    if (env != nullptr && reason != nullptr) {
+        const char* chars = env->GetStringUTFChars(reason, nullptr);
+        if (chars != nullptr) {
+            nativeReason.assign(chars);
+            env->ReleaseStringUTFChars(reason, chars);
+        }
+    }
+    if (nativeReason.empty()) {
+        nativeReason = "package_set_changed";
+    }
+    fusehide::NotifyUidRulePackageSetChanged(nativeReason);
+}
+
 JNIEXPORT jint JNICALL Java_io_github_xiaotong6666_fusehide_debug_Utils_rmdir(JNIEnv* env,
                                                                               jclass clazz,
                                                                               jstring path) {

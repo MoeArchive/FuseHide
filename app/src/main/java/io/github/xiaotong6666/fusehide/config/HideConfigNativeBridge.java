@@ -58,4 +58,8 @@ public final class HideConfigNativeBridge {
             String[] packageRulePackages,
             String[] packageRuleHiddenRootEntryNames,
             String[] packageRuleHiddenRelativePaths);
+
+    // Package add/remove can change the effective hide rule for an already-seen uid even when the
+    // serialized config is unchanged.
+    public static native void notifyPackageSetChanged(String reason);
 }

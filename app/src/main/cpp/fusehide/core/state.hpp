@@ -246,16 +246,38 @@ struct HideConfig {
     std::vector<PackageHideRule> packageRules;
 };
 
-struct ResolvedHideRule {
+// Precompute the rule into lookup-friendly shapes once so hot FUSE path checks stay on set/prefix
+// lookups. fingerprint identifies FuseHide policy semantics only; callers still need uid/path when
+// they cache MediaProvider-visible results.
+struct CompiledHideRule {
+    uint64_t fingerprint = 0;
     bool enableHideAllRootEntries = false;
     std::vector<std::string> hideAllRootEntriesExemptions;
     std::vector<std::string> hiddenRootEntryNames;
     std::vector<std::string> hiddenRelativePaths;
+    std::unordered_set<std::string> hideAllRootEntriesExemptionSet;
+    std::unordered_set<std::string> hiddenRootEntryNameSet;
+    std::unordered_set<std::string> normalizedHiddenRelativePathExactSet;
+    std::vector<std::string> normalizedHiddenRelativePathPrefixes;
+    std::unordered_set<std::string> hiddenRelativePathFirstComponentSet;
+    std::unordered_set<std::string> exactHiddenTargetParentRelativePathSet;
 };
 
+// Keep global, any-package, and per-package fragments separate so uid resolution only merges the
+// fragments returned by PackageManager instead of rescanning the raw config each time.
+struct CompiledHideConfig {
+    std::shared_ptr<const CompiledHideRule> globalRuleFragment;
+    std::shared_ptr<const CompiledHideRule> anyPackageRule;
+    std::unordered_set<std::string> hiddenPackageSet;
+    std::unordered_map<std::string, std::shared_ptr<const CompiledHideRule>> packageRuleFragments;
+};
+
+// The effective rule for one uid can change on either config reload or package add/remove, so both
+// generations participate in uid cache validity.
 struct UidHideRuleCacheEntry {
     uint64_t configGeneration = 0;
-    std::shared_ptr<const ResolvedHideRule> rule;
+    uint64_t packageSetGeneration = 0;
+    std::shared_ptr<const CompiledHideRule> rule;
 };
 
 // These RVAs are device-specific addresses from reverse-engineered libfuse_jni.so builds.
@@ -412,9 +434,11 @@ extern std::atomic<int> gReplyErrFallbackLogCount;
 extern std::atomic<int> gErrnoRemapLogCount;
 extern std::atomic<int> gSuspiciousDirectLogCount;
 extern std::atomic<uint64_t> gHideConfigGeneration;
+extern std::atomic<uint64_t> gUidPackageSetGeneration;
 extern std::mutex gUidHideCacheMutex;
 extern std::unordered_map<uint32_t, UidHideRuleCacheEntry> gUidHideRuleCache;
 extern std::shared_ptr<const HideConfig> gHideConfig;
+extern std::shared_ptr<const CompiledHideConfig> gCompiledHideConfig;
 
 inline bool ShouldLogLimited(std::atomic<int>& counter, int limit = 8) {
     const int old = counter.fetch_add(1, std::memory_order_relaxed);
@@ -428,16 +452,20 @@ inline void DebugLogPrint(int priority, const char* fmt, Args... args) {
     }
 }
 
-std::shared_ptr<const ResolvedHideRule> ResolveHideRuleForUid(uint32_t uid);
-std::optional<std::shared_ptr<const ResolvedHideRule>> ResolveHideRuleForUidWithPackageManager(
+std::shared_ptr<const CompiledHideRule> ResolveHideRuleForUid(uint32_t uid);
+std::optional<std::shared_ptr<const CompiledHideRule>> ResolveHideRuleForUidWithPackageManager(
     uint32_t uid);
 HideConfig DefaultHideConfig();
 std::shared_ptr<const HideConfig> CurrentHideConfig();
+std::shared_ptr<const CompiledHideConfig> CurrentCompiledHideConfig();
 void ApplyHideConfig(HideConfig config);
 void ClearRootSnapshotCache();
 void ClearHiddenPathClassificationCache();
-bool IsHiddenPackageName(std::string_view packageName);
-std::shared_ptr<const ResolvedHideRule> RuleForAnyPackage();
+void NotifyUidRulePackageSetChanged(std::string_view reason);
+std::shared_ptr<const CompiledHideRule> RuleForAnyPackage();
+uint64_t EffectiveHideRuleFingerprint(const std::shared_ptr<const CompiledHideRule>& rule);
+bool CompiledHideRulesSemanticallyEqual(const std::shared_ptr<const CompiledHideRule>& lhs,
+                                        const std::shared_ptr<const CompiledHideRule>& rhs);
 
 class UnicodePolicy final {
    public:
