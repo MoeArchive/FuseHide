@@ -9,7 +9,7 @@ lifecycleRuntimeKtx = "2.11.0"
 activityCompose = "1.13.0"
 kotlin = "2.4.10"
 composeBom = "2026.06.01"
-material3 = "1.5.0-alpha23"
+material3 = "1.5.0-alpha24"
 materialKolor = "5.0.0"
 spotless = "8.8.0"
 miuix = "0.9.3"
@@ -19,6 +19,7 @@ benchmarkMacroJunit4 = "1.4.1"
 uiautomator = "2.4.0"
 navigation3 = "1.1.4"
 navigationevent = "1.1.2"
+commonmark = "0.29.0"
 
 [libraries]
 androidx-profileinstaller = { group = "androidx.profileinstaller", name = "profileinstaller", version.ref = "profileinstaller" }
@@ -49,6 +50,8 @@ androidx-lifecycle-viewmodel-navigation3 = { module = "androidx.lifecycle:lifecy
 androidx-navigation3-runtime = { module = "androidx.navigation3:navigation3-runtime", version.ref = "navigation3" }
 androidx-navigationevent-compose = { module = "androidx.navigationevent:navigationevent-compose", version.ref = "navigationevent" }
 miuix-navigation3-ui = { module = "top.yukonga.miuix.kmp:miuix-navigation3-ui-android", version.ref = "miuix" }
+commonmark = { module = "org.commonmark:commonmark", version.ref = "commonmark" }
+
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
