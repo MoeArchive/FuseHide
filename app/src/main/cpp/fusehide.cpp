@@ -35,8 +35,9 @@ std::atomic<int> gEqualsIgnoreCaseLogCount{0};
 std::atomic<int> gReplyErrFallbackLogCount{0};
 std::atomic<int> gErrnoRemapLogCount{0};
 std::atomic<int> gSuspiciousDirectLogCount{0};
+std::atomic<uint64_t> gHideConfigGeneration{1};
 std::mutex gUidHideCacheMutex;
-std::unordered_map<uint32_t, std::shared_ptr<const ResolvedHideRule>> gUidHideRuleCache;
+std::unordered_map<uint32_t, UidHideRuleCacheEntry> gUidHideRuleCache;
 std::shared_ptr<const HideConfig> gHideConfig = std::make_shared<HideConfig>(DefaultHideConfig());
 
 namespace {
@@ -137,14 +138,18 @@ std::shared_ptr<const HideConfig> CurrentHideConfig() {
 void ApplyHideConfig(HideConfig config) {
     auto next = std::make_shared<const HideConfig>(std::move(config));
     std::atomic_store_explicit(&gHideConfig, std::move(next), std::memory_order_release);
+    const uint64_t generation = gHideConfigGeneration.fetch_add(1, std::memory_order_acq_rel) + 1;
     {
         std::lock_guard<std::mutex> lock(gUidHideCacheMutex);
         gUidHideRuleCache.clear();
     }
+    ClearRootSnapshotCache();
+    ClearHiddenPathClassificationCache();
     InvalidateTrackedHideTargetsForCurrentConfig();
     DebugLogPrint(4,
-                  "applied hide config hide_all=%d exemptions=%zu roots=%zu packages=%zu "
-                  "package_rules=%zu",
+                  "applied hide config generation=%llu hide_all=%d exemptions=%zu roots=%zu "
+                  "packages=%zu package_rules=%zu",
+                  static_cast<unsigned long long>(generation),
                   CurrentHideConfig()->enableHideAllRootEntries ? 1 : 0,
                   CurrentHideConfig()->hideAllRootEntriesExemptions.size(),
                   CurrentHideConfig()->hiddenRootEntryNames.size(),
@@ -166,10 +171,12 @@ std::shared_ptr<const ResolvedHideRule> RuleForAnyPackage() {
     static std::mutex cacheMutex;
     static std::shared_ptr<const HideConfig> cachedConfig;
     static std::shared_ptr<const ResolvedHideRule> cachedRule;
+    static uint64_t cachedGeneration = 0;
 
     const auto config = CurrentHideConfig();
+    const uint64_t generation = gHideConfigGeneration.load(std::memory_order_acquire);
     std::lock_guard<std::mutex> lock(cacheMutex);
-    if (cachedConfig == config) {
+    if (cachedConfig == config && cachedGeneration == generation) {
         return cachedRule;
     }
 
@@ -179,6 +186,7 @@ std::shared_ptr<const ResolvedHideRule> RuleForAnyPackage() {
         MergePackageRule(packageRule, &merged);
     }
     cachedConfig = config;
+    cachedGeneration = generation;
     cachedRule = RuleHasTargets(merged)
                      ? std::make_shared<const ResolvedHideRule>(std::move(merged))
                      : nullptr;
@@ -221,11 +229,15 @@ JNIEnv* GetJniEnv(bool* didAttach) {
 }  // namespace
 
 std::shared_ptr<const ResolvedHideRule> ResolveHideRuleForUid(uint32_t uid) {
+    const uint64_t generation = gHideConfigGeneration.load(std::memory_order_acquire);
     {
         std::lock_guard<std::mutex> lock(gUidHideCacheMutex);
         const auto it = gUidHideRuleCache.find(uid);
         if (it != gUidHideRuleCache.end()) {
-            return it->second;
+            if (it->second.configGeneration == generation) {
+                return it->second.rule;
+            }
+            gUidHideRuleCache.erase(it);
         }
     }
 
@@ -235,7 +247,9 @@ std::shared_ptr<const ResolvedHideRule> ResolveHideRuleForUid(uint32_t uid) {
     }
     {
         std::lock_guard<std::mutex> lock(gUidHideCacheMutex);
-        gUidHideRuleCache[uid] = *resolved;
+        if (gHideConfigGeneration.load(std::memory_order_acquire) == generation) {
+            gUidHideRuleCache[uid] = UidHideRuleCacheEntry{generation, *resolved};
+        }
     }
     return *resolved;
 }

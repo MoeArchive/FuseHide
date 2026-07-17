@@ -253,6 +253,11 @@ struct ResolvedHideRule {
     std::vector<std::string> hiddenRelativePaths;
 };
 
+struct UidHideRuleCacheEntry {
+    uint64_t configGeneration = 0;
+    std::shared_ptr<const ResolvedHideRule> rule;
+};
+
 // These RVAs are device-specific addresses from reverse-engineered libfuse_jni.so builds.
 // The production device library we analyzed is stripped, so internal helpers such as
 // is_app_accessible_path and several pf_* handlers are not always recoverable by name from the
@@ -406,8 +411,9 @@ extern std::atomic<int> gEqualsIgnoreCaseLogCount;
 extern std::atomic<int> gReplyErrFallbackLogCount;
 extern std::atomic<int> gErrnoRemapLogCount;
 extern std::atomic<int> gSuspiciousDirectLogCount;
+extern std::atomic<uint64_t> gHideConfigGeneration;
 extern std::mutex gUidHideCacheMutex;
-extern std::unordered_map<uint32_t, std::shared_ptr<const ResolvedHideRule>> gUidHideRuleCache;
+extern std::unordered_map<uint32_t, UidHideRuleCacheEntry> gUidHideRuleCache;
 extern std::shared_ptr<const HideConfig> gHideConfig;
 
 inline bool ShouldLogLimited(std::atomic<int>& counter, int limit = 8) {
@@ -428,6 +434,8 @@ std::optional<std::shared_ptr<const ResolvedHideRule>> ResolveHideRuleForUidWith
 HideConfig DefaultHideConfig();
 std::shared_ptr<const HideConfig> CurrentHideConfig();
 void ApplyHideConfig(HideConfig config);
+void ClearRootSnapshotCache();
+void ClearHiddenPathClassificationCache();
 bool IsHiddenPackageName(std::string_view packageName);
 std::shared_ptr<const ResolvedHideRule> RuleForAnyPackage();
 

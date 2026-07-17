@@ -23,32 +23,350 @@ namespace fusehide {
 namespace {
 
 thread_local uint32_t gActiveCreateUid = 0;
+thread_local uint32_t gActiveCreateScopeDepth = 0;
 thread_local uint32_t gLastPathPolicyUid = 0;
 thread_local std::string gLastPathPolicyPath;
+
+enum class HiddenPathClassification : uint8_t {
+    kNone,
+    kHiddenRoot,
+    kHiddenDescendant,
+};
+
+struct HiddenPathClassificationCacheKey {
+    uint32_t uid = 0;
+    std::string path;
+
+    bool operator==(const HiddenPathClassificationCacheKey& other) const {
+        return uid == other.uid && path == other.path;
+    }
+};
+
+struct HiddenPathClassificationCacheKeyHash {
+    size_t operator()(const HiddenPathClassificationCacheKey& key) const {
+        const size_t uidHash = std::hash<uint32_t>{}(key.uid);
+        const size_t pathHash = std::hash<std::string>{}(key.path);
+        return uidHash ^ (pathHash + 0x9e3779b9 + (uidHash << 6) + (uidHash >> 2));
+    }
+};
+
+struct HiddenPathClassificationCacheEntry {
+    uint64_t configGeneration = 0;
+    HiddenPathClassification classification = HiddenPathClassification::kNone;
+};
+
+struct RootSnapshotCacheKey {
+    uint32_t uid = 0;
+    std::string path;
+
+    bool operator==(const RootSnapshotCacheKey& other) const {
+        return uid == other.uid && path == other.path;
+    }
+};
+
+struct RootSnapshotCacheKeyHash {
+    size_t operator()(const RootSnapshotCacheKey& key) const {
+        const size_t uidHash = std::hash<uint32_t>{}(key.uid);
+        const size_t pathHash = std::hash<std::string>{}(key.path);
+        return uidHash ^ (pathHash + 0x9e3779b9 + (uidHash << 6) + (uidHash >> 2));
+    }
+};
+
+struct RootSnapshotCacheEntry {
+    uint64_t configGeneration = 0;
+    uint64_t parentGeneration = 0;
+    std::shared_ptr<const DirectoryEntries> entries;
+};
+
+constexpr size_t kMaxHiddenPathClassificationCacheEntries = 4096;
+
+std::mutex gHiddenPathClassificationCacheMutex;
+std::unordered_map<HiddenPathClassificationCacheKey, HiddenPathClassificationCacheEntry,
+                   HiddenPathClassificationCacheKeyHash>
+    gHiddenPathClassificationCache;
+std::mutex gRootSnapshotCacheMutex;
+std::unordered_map<RootSnapshotCacheKey, RootSnapshotCacheEntry, RootSnapshotCacheKeyHash>
+    gRootSnapshotCache;
+std::mutex gPendingRootSnapshotMutationsMutex;
+std::unordered_map<uint64_t, const char*> gPendingRootSnapshotMutations;
+std::atomic<uint64_t> gRootSnapshotParentGeneration{1};
 
 class ScopedCreateUid final {
    public:
     explicit ScopedCreateUid(uint32_t uid) : previous_(gActiveCreateUid) {
+        ++gActiveCreateScopeDepth;
         gActiveCreateUid = uid;
     }
 
     ~ScopedCreateUid() {
         gActiveCreateUid = previous_;
+        if (gActiveCreateScopeDepth != 0) {
+            --gActiveCreateScopeDepth;
+        }
     }
 
    private:
     uint32_t previous_;
 };
 
+std::string_view TrimTrailingSlashes(std::string_view path) {
+    while (path.size() > 1 && path.back() == '/') {
+        path.remove_suffix(1);
+    }
+    return path;
+}
+
+bool IsVisibleRootPath(std::string_view path) {
+    return TrimTrailingSlashes(path) == kVisibleStorageRoots[0];
+}
+
+bool IsPathUnderVisibleRoot(std::string_view path) {
+    path = TrimTrailingSlashes(path);
+    const std::string_view root = kVisibleStorageRoots[0];
+    return path == root || (path.size() > root.size() && path.compare(0, root.size(), root) == 0 &&
+                            path[root.size()] == '/');
+}
+
+std::string CanonicalRootSnapshotPath(std::string_view path) {
+    return IsVisibleRootPath(path) ? std::string(kVisibleStorageRoots[0]) : std::string();
+}
+
+bool PathHasVisibleRootParent(std::string_view path) {
+    path = TrimTrailingSlashes(path);
+    const size_t slash = path.rfind('/');
+    if (slash == std::string_view::npos || slash == 0) {
+        return false;
+    }
+    return IsVisibleRootPath(path.substr(0, slash));
+}
+
+bool ResolveVisibleParentPath(uint64_t parent, std::string* parentPathOut) {
+    if (parentPathOut == nullptr) {
+        return false;
+    }
+    const uint64_t rootParent = gHiddenRootParentInode.load(std::memory_order_relaxed);
+    if (rootParent != 0 && parent == rootParent) {
+        *parentPathOut = std::string(kVisibleStorageRoots[0]);
+        return true;
+    }
+    const auto trackedParentPath = LookupTrackedPathForInode(parent);
+    if (!trackedParentPath.has_value()) {
+        return false;
+    }
+    *parentPathOut = *trackedParentPath;
+    return true;
+}
+
+HiddenPathClassification ComputeHiddenPathClassification(uint32_t uid, std::string_view path) {
+    if (uid == 0 || !HiddenPathPolicy::IsTestHiddenUid(uid) ||
+        HiddenPathPolicy::IsHiddenRootDirectoryPath(path)) {
+        return HiddenPathClassification::kNone;
+    }
+    if (HiddenPathPolicy::IsExactHiddenTargetPath(uid, path)) {
+        return HiddenPathClassification::kHiddenRoot;
+    }
+    if (HiddenPathPolicy::IsAnyHiddenSubtreePath(uid, path)) {
+        return HiddenPathClassification::kHiddenDescendant;
+    }
+    return HiddenPathClassification::kNone;
+}
+
+const char* HiddenPathClassificationName(HiddenPathClassification classification) {
+    switch (classification) {
+        case HiddenPathClassification::kNone:
+            return "none";
+        case HiddenPathClassification::kHiddenRoot:
+            return "hidden_root";
+        case HiddenPathClassification::kHiddenDescendant:
+            return "hidden_descendant";
+    }
+    return "unknown";
+}
+
+HiddenPathClassification ClassifyHiddenPath(uint32_t uid, std::string_view path) {
+    if (uid == 0 || path.empty()) {
+        return HiddenPathClassification::kNone;
+    }
+
+    HiddenPathClassificationCacheKey key{uid, std::string(path)};
+    uint64_t generation = 0;
+    bool staleEntry = false;
+    {
+        std::lock_guard<std::mutex> lock(gHiddenPathClassificationCacheMutex);
+        generation = gHideConfigGeneration.load(std::memory_order_acquire);
+        const auto it = gHiddenPathClassificationCache.find(key);
+        if (it != gHiddenPathClassificationCache.end()) {
+            if (it->second.configGeneration == generation) {
+                if (IsPathUnderVisibleRoot(path)) {
+                    DebugLogPrint(4,
+                                  "cache hidden_path hit uid=%u path=%s class=%s generation=%llu",
+                                  static_cast<unsigned>(uid), DebugPreview(path).c_str(),
+                                  HiddenPathClassificationName(it->second.classification),
+                                  static_cast<unsigned long long>(generation));
+                }
+                return it->second.classification;
+            }
+            staleEntry = true;
+            gHiddenPathClassificationCache.erase(it);
+        }
+    }
+    if (IsPathUnderVisibleRoot(path)) {
+        DebugLogPrint(4, "cache hidden_path miss uid=%u path=%s reason=%s generation=%llu",
+                      static_cast<unsigned>(uid), DebugPreview(path).c_str(),
+                      staleEntry ? "stale" : "empty", static_cast<unsigned long long>(generation));
+    }
+
+    const HiddenPathClassification classification = ComputeHiddenPathClassification(uid, path);
+    {
+        std::lock_guard<std::mutex> lock(gHiddenPathClassificationCacheMutex);
+        if (gHideConfigGeneration.load(std::memory_order_acquire) == generation) {
+            if (gHiddenPathClassificationCache.size() >= kMaxHiddenPathClassificationCacheEntries) {
+                gHiddenPathClassificationCache.clear();
+            }
+            gHiddenPathClassificationCache.insert_or_assign(
+                std::move(key), HiddenPathClassificationCacheEntry{generation, classification});
+            if (IsPathUnderVisibleRoot(path)) {
+                DebugLogPrint(4, "cache hidden_path store uid=%u path=%s class=%s generation=%llu",
+                              static_cast<unsigned>(uid), DebugPreview(path).c_str(),
+                              HiddenPathClassificationName(classification),
+                              static_cast<unsigned long long>(generation));
+            }
+        }
+    }
+    return classification;
+}
+
+bool IsHiddenPathClassification(HiddenPathClassification classification) {
+    return classification != HiddenPathClassification::kNone;
+}
+
+bool IsExactHiddenPathClassification(HiddenPathClassification classification) {
+    return classification == HiddenPathClassification::kHiddenRoot;
+}
+
+bool CanCacheRootSnapshotEntries(const DirectoryEntries& entries) {
+    if (entries.empty()) {
+        return true;
+    }
+    const auto& first = entries.front();
+    return first != nullptr && !first->d_name.empty();
+}
+
+DirectoryEntries CloneDirectoryEntries(const DirectoryEntries& entries) {
+    return DirectoryEntries(entries.begin(), entries.end());
+}
+
+std::optional<DirectoryEntries> LookupRootSnapshotCache(uint32_t uid, std::string_view path) {
+    const std::string canonicalPath = CanonicalRootSnapshotPath(path);
+    if (canonicalPath.empty()) {
+        return std::nullopt;
+    }
+
+    const RootSnapshotCacheKey key{uid, canonicalPath};
+    std::lock_guard<std::mutex> lock(gRootSnapshotCacheMutex);
+    const uint64_t configGeneration = gHideConfigGeneration.load(std::memory_order_acquire);
+    const uint64_t parentGeneration = gRootSnapshotParentGeneration.load(std::memory_order_acquire);
+    const auto it = gRootSnapshotCache.find(key);
+    if (it == gRootSnapshotCache.end()) {
+        DebugLogPrint(4,
+                      "cache root_snapshot miss uid=%u path=%s reason=empty generation=%llu "
+                      "parent_generation=%llu",
+                      static_cast<unsigned>(uid), DebugPreview(canonicalPath).c_str(),
+                      static_cast<unsigned long long>(configGeneration),
+                      static_cast<unsigned long long>(parentGeneration));
+        return std::nullopt;
+    }
+    if (it->second.configGeneration != configGeneration ||
+        it->second.parentGeneration != parentGeneration || it->second.entries == nullptr) {
+        DebugLogPrint(4,
+                      "cache root_snapshot miss uid=%u path=%s reason=stale cached_generation=%llu "
+                      "live_generation=%llu cached_parent_generation=%llu "
+                      "live_parent_generation=%llu",
+                      static_cast<unsigned>(uid), DebugPreview(canonicalPath).c_str(),
+                      static_cast<unsigned long long>(it->second.configGeneration),
+                      static_cast<unsigned long long>(configGeneration),
+                      static_cast<unsigned long long>(it->second.parentGeneration),
+                      static_cast<unsigned long long>(parentGeneration));
+        gRootSnapshotCache.erase(it);
+        return std::nullopt;
+    }
+    DebugLogPrint(4,
+                  "cache root_snapshot hit uid=%u path=%s entries=%zu generation=%llu "
+                  "parent_generation=%llu",
+                  static_cast<unsigned>(uid), DebugPreview(canonicalPath).c_str(),
+                  it->second.entries->size(), static_cast<unsigned long long>(configGeneration),
+                  static_cast<unsigned long long>(parentGeneration));
+    return CloneDirectoryEntries(*it->second.entries);
+}
+
+void MaybeStoreRootSnapshotCache(uint32_t uid, std::string_view path,
+                                 const DirectoryEntries& entries) {
+    const std::string canonicalPath = CanonicalRootSnapshotPath(path);
+    if (canonicalPath.empty() || !CanCacheRootSnapshotEntries(entries)) {
+        return;
+    }
+
+    const uint64_t configGeneration = gHideConfigGeneration.load(std::memory_order_acquire);
+    const uint64_t parentGeneration = gRootSnapshotParentGeneration.load(std::memory_order_acquire);
+    auto snapshot = std::make_shared<const DirectoryEntries>(CloneDirectoryEntries(entries));
+
+    std::lock_guard<std::mutex> lock(gRootSnapshotCacheMutex);
+    if (gHideConfigGeneration.load(std::memory_order_acquire) != configGeneration ||
+        gRootSnapshotParentGeneration.load(std::memory_order_acquire) != parentGeneration) {
+        return;
+    }
+    gRootSnapshotCache.insert_or_assign(
+        RootSnapshotCacheKey{uid, canonicalPath},
+        RootSnapshotCacheEntry{configGeneration, parentGeneration, std::move(snapshot)});
+    DebugLogPrint(4,
+                  "cache root_snapshot store uid=%u path=%s entries=%zu generation=%llu "
+                  "parent_generation=%llu",
+                  static_cast<unsigned>(uid), DebugPreview(canonicalPath).c_str(), entries.size(),
+                  static_cast<unsigned long long>(configGeneration),
+                  static_cast<unsigned long long>(parentGeneration));
+}
+
+void BumpRootSnapshotParentGeneration(const char* reason) {
+    uint64_t generation = 0;
+    {
+        std::lock_guard<std::mutex> lock(gRootSnapshotCacheMutex);
+        generation = gRootSnapshotParentGeneration.fetch_add(1, std::memory_order_acq_rel) + 1;
+        gRootSnapshotCache.clear();
+    }
+    DebugLogPrint(4, "root snapshot invalidated reason=%s generation=%llu", reason,
+                  static_cast<unsigned long long>(generation));
+}
+
+void TrackPendingRootSnapshotMutation(fuse_req_t req, const char* opName) {
+    if (req == nullptr) {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(gPendingRootSnapshotMutationsMutex);
+    gPendingRootSnapshotMutations[req->unique] = opName;
+}
+
+std::optional<const char*> TakePendingRootSnapshotMutation(fuse_req_t req) {
+    if (req == nullptr) {
+        return std::nullopt;
+    }
+    std::lock_guard<std::mutex> lock(gPendingRootSnapshotMutationsMutex);
+    const auto it = gPendingRootSnapshotMutations.find(req->unique);
+    if (it == gPendingRootSnapshotMutations.end()) {
+        return std::nullopt;
+    }
+    const char* opName = it->second;
+    gPendingRootSnapshotMutations.erase(it);
+    return opName;
+}
+
 bool ShouldHideLowerFsCreatePath(std::string_view pathView) {
     const uint32_t uid = gActiveCreateUid != 0 ? gActiveCreateUid : gLastPathPolicyUid;
-    return uid != 0 && HiddenPathPolicy::IsTestHiddenUid(uid) &&
-           HiddenPathPolicy::IsExactHiddenTargetPath(uid, pathView);
+    return uid != 0 && IsExactHiddenPathClassification(ClassifyHiddenPath(uid, pathView));
 }
 
 bool ShouldHideLowerFsPath(std::string_view pathView) {
     const uint32_t uid = gActiveCreateUid != 0 ? gActiveCreateUid : gLastPathPolicyUid;
-    return uid != 0 && HiddenPathPolicy::ShouldHideTestPath(uid, pathView);
+    return uid != 0 && IsHiddenPathClassification(ClassifyHiddenPath(uid, pathView));
 }
 
 std::string ReadDirectoryPathFromDir(DIR* dirp) {
@@ -204,18 +522,32 @@ DirectoryEntries WrappedGetDirectoryEntries(void* wrapper, uint32_t uid, AbiStri
                                             DIR* dirp) {
     auto fn = reinterpret_cast<GetDirectoryEntriesFn>(gOriginalGetDirectoryEntries);
     const std::string path(AbiStringView(pathArg));
-    DirectoryEntries entries = fn ? fn(wrapper, uid, pathArg, dirp) : DirectoryEntries();
     if (gCurrentReaddirReqUnique != 0) {
         std::lock_guard<std::mutex> lock(gPendingReaddirContextsMutex);
         auto it = gPendingReaddirContexts.find(gCurrentReaddirReqUnique);
         if (it != gPendingReaddirContexts.end()) {
             it->second.path = path;
+            if (it->second.ino != 0) {
+                RememberTrackedPathForInode(it->second.ino, path);
+            }
             DebugLogPrint(4, "record readdir path req=%lu ino=%s path=%s",
                           (unsigned long)gCurrentReaddirReqUnique,
                           InodePath(it->second.ino).c_str(), DebugPreview(path).c_str());
         }
     }
-    return FilterHiddenDirectoryEntries(uid, path, std::move(entries));
+
+    if (dirp != nullptr) {
+        if (auto cachedEntries = LookupRootSnapshotCache(uid, path); cachedEntries.has_value()) {
+            return std::move(*cachedEntries);
+        }
+    }
+
+    DirectoryEntries entries = fn ? fn(wrapper, uid, pathArg, dirp) : DirectoryEntries();
+    entries = FilterHiddenDirectoryEntries(uid, path, std::move(entries));
+    if (dirp != nullptr && fn != nullptr) {
+        MaybeStoreRootSnapshotCache(uid, path, entries);
+    }
+    return entries;
 }
 
 void WrappedAddDirectoryEntriesFromLowerFs(DIR* dirp, LowerFsDirentFilterFn filter,
@@ -404,6 +736,10 @@ extern "C" void WrappedPfUnlink(fuse_req_t req, uint64_t parent, const char* nam
     if (ReplyHiddenNamedTargetError(req, "pf_unlink", kind, ENOENT, ENOENT)) {
         return;
     }
+    std::string parentPath;
+    if (ResolveVisibleParentPath(parent, &parentPath) && IsVisibleRootPath(parentPath)) {
+        TrackPendingRootSnapshotMutation(req, "pf_unlink");
+    }
     auto fn = reinterpret_cast<void (*)(fuse_req_t, uint64_t, const char*)>(gOriginalPfUnlink);
     if (fn) {
         fn(req, parent, name);
@@ -419,6 +755,10 @@ extern "C" void WrappedPfRmdir(fuse_req_t req, uint64_t parent, const char* name
         ClassifyHiddenNamedTarget(RuntimeState::ReqUid(req), parent, name);
     if (ReplyHiddenNamedTargetError(req, "pf_rmdir", kind, ENOENT, ENOENT)) {
         return;
+    }
+    std::string parentPath;
+    if (ResolveVisibleParentPath(parent, &parentPath) && IsVisibleRootPath(parentPath)) {
+        TrackPendingRootSnapshotMutation(req, "pf_rmdir");
     }
     auto fn = reinterpret_cast<void (*)(fuse_req_t, uint64_t, const char*)>(gOriginalPfRmdir);
     if (fn) {
@@ -461,6 +801,14 @@ extern "C" void WrappedPfRename(fuse_req_t req, uint64_t parent, const char* nam
             return;
         }
         ArmHiddenErrorRemap(req, ENOENT, "pf_rename");
+    }
+    std::string oldParentPath;
+    std::string newParentPath;
+    const bool touchesRoot =
+        (ResolveVisibleParentPath(parent, &oldParentPath) && IsVisibleRootPath(oldParentPath)) ||
+        (ResolveVisibleParentPath(new_parent, &newParentPath) && IsVisibleRootPath(newParentPath));
+    if (touchesRoot) {
+        TrackPendingRootSnapshotMutation(req, "pf_rename");
     }
     auto fn = reinterpret_cast<void (*)(fuse_req_t, uint64_t, const char*, uint64_t, const char*,
                                         uint32_t)>(gOriginalPfRename);
@@ -917,11 +1265,15 @@ extern "C" int WrappedReplyBuf(fuse_req_t req, const char* buf, size_t size) {
 
 extern "C" int WrappedReplyErr(fuse_req_t req, int err) {
     auto fn = ReplyErrorBridge::Original();
+    const auto pendingRootMutation = TakePendingRootSnapshotMutation(req);
     if (req != nullptr) {
         std::lock_guard<std::mutex> lock(gPendingReaddirContextsMutex);
         gPendingReaddirContexts.erase(req->unique);
     }
     err = MaybeRewriteHiddenLeakErrno(req, err, "fuse_reply_err");
+    if (pendingRootMutation.has_value() && err == 0) {
+        BumpRootSnapshotParentGeneration(*pendingRootMutation);
+    }
     int ret = fn ? fn(req, err) : -1;
     if (gInPfLookupPostfilter) {
         DebugLogPrint(3, "pf_lookup_postfilter fuse_reply_err req=%p %d", req, err);
@@ -980,7 +1332,7 @@ extern "C" int WrappedLstat(const char* path, struct stat* st) {
     if (gInPfGetattr && HiddenPathPolicy::IsTestHiddenUid(gPfGetattrUid)) {
         DebugLogPrint(4, "pf_getattr lstat uid=%u path=%s", static_cast<unsigned>(gPfGetattrUid),
                       DebugPreview(pathView).c_str());
-        if (HiddenPathPolicy::ShouldHideTestPath(gPfGetattrUid, pathView)) {
+        if (IsHiddenPathClassification(ClassifyHiddenPath(gPfGetattrUid, pathView))) {
             DebugLogPrint(4, "hide test lstat uid=%u path=%s", static_cast<unsigned>(gPfGetattrUid),
                           DebugPreview(pathView).c_str());
             errno = ENOENT;
@@ -1013,8 +1365,8 @@ extern "C" int WrappedLstat(const char* path, struct stat* st) {
 
 extern "C" int WrappedStat(const char* path, struct stat* st) {
     const std::string_view pathView = path != nullptr ? std::string_view(path) : std::string_view();
-    if (gInPfReaddirPostfilter && HiddenPathPolicy::IsTestHiddenUid(gPfReaddirUid) &&
-        HiddenPathPolicy::IsAnyHiddenSubtreePath(gPfReaddirUid, pathView)) {
+    if (gInPfReaddirPostfilter &&
+        IsHiddenPathClassification(ClassifyHiddenPath(gPfReaddirUid, pathView))) {
         DebugLogPrint(4, "hide readdir stat uid=%u path=%s", static_cast<unsigned>(gPfReaddirUid),
                       DebugPreview(pathView).c_str());
         errno = ENOENT;
@@ -1085,7 +1437,11 @@ extern "C" int WrappedMkdirLibc(const char* path, mode_t mode) {
     }
     auto fn = reinterpret_cast<int (*)(const char*, mode_t)>(gOriginalMkdir);
     if (fn) {
-        return fn(path, mode);
+        const int ret = fn(path, mode);
+        if (ret == 0 && gActiveCreateScopeDepth != 0 && PathHasVisibleRootParent(pathView)) {
+            BumpRootSnapshotParentGeneration("lower_mkdir");
+        }
+        return ret;
     }
     errno = ENOSYS;
     return -1;
@@ -1105,7 +1461,11 @@ extern "C" int WrappedMknod(const char* path, mode_t mode, dev_t dev) {
     }
     auto fn = reinterpret_cast<int (*)(const char*, mode_t, dev_t)>(gOriginalMknod);
     if (fn) {
-        return fn(path, mode, dev);
+        const int ret = fn(path, mode, dev);
+        if (ret == 0 && gActiveCreateScopeDepth != 0 && PathHasVisibleRootParent(pathView)) {
+            BumpRootSnapshotParentGeneration("lower_mknod");
+        }
+        return ret;
     }
     errno = ENOSYS;
     return -1;
@@ -1136,7 +1496,11 @@ extern "C" int WrappedOpen(const char* path, int flags, ...) {
     auto fn = reinterpret_cast<int (*)(const char*, int, ...)>(gOriginalOpen);
     if (fn) {
         if ((flags & O_CREAT) != 0) {
-            return fn(path, flags, mode);
+            const int ret = fn(path, flags, mode);
+            if (ret >= 0 && gActiveCreateScopeDepth != 0 && PathHasVisibleRootParent(pathView)) {
+                BumpRootSnapshotParentGeneration("lower_open_create");
+            }
+            return ret;
         }
         return fn(path, flags);
     }
@@ -1161,7 +1525,12 @@ extern "C" int WrappedOpen2(const char* path, int flags) {
     }
     auto fn = reinterpret_cast<int (*)(const char*, int)>(gOriginalOpen2);
     if (fn) {
-        return fn(path, flags);
+        const int ret = fn(path, flags);
+        if (ret >= 0 && (flags & O_CREAT) != 0 && gActiveCreateScopeDepth != 0 &&
+            PathHasVisibleRootParent(pathView)) {
+            BumpRootSnapshotParentGeneration("lower_open2_create");
+        }
+        return ret;
     }
     errno = ENOSYS;
     return -1;
@@ -1174,13 +1543,17 @@ bool HiddenPathPolicy::IsTestHiddenUid(uint32_t uid) {
 }
 
 bool HiddenPathPolicy::ShouldHideTestPath(uint32_t uid, std::string_view path) {
-    if (!IsTestHiddenUid(uid)) {
-        return false;
-    }
-    if (IsHiddenRootDirectoryPath(path)) {
-        return false;
-    }
-    return IsAnyHiddenSubtreePath(uid, path);
+    return IsHiddenPathClassification(ClassifyHiddenPath(uid, path));
+}
+
+void ClearRootSnapshotCache() {
+    std::lock_guard<std::mutex> lock(gRootSnapshotCacheMutex);
+    gRootSnapshotCache.clear();
+}
+
+void ClearHiddenPathClassificationCache() {
+    std::lock_guard<std::mutex> lock(gHiddenPathClassificationCacheMutex);
+    gHiddenPathClassificationCache.clear();
 }
 
 // Mirror the original app-accessible gate: sanitize only when needed, then delegate.
