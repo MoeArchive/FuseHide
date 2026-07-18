@@ -192,6 +192,30 @@ void* CurrentSchedulingFuseSession() {
     return gLastFuseSession.load(std::memory_order_acquire);
 }
 
+bool PathEqualsForFuseLookup(std::string_view lhs, std::string_view rhs) {
+    return UnicodePolicy::CompareCaseFoldIgnoringDefaultIgnorables(
+               reinterpret_cast<const uint8_t*>(lhs.data()), lhs.size(),
+               reinterpret_cast<const uint8_t*>(rhs.data()), rhs.size()) == 0;
+}
+
+bool IsVisibleRootChildLookupPath(std::string_view path, std::string_view name) {
+    if (path.empty() || name.empty()) {
+        return false;
+    }
+    for (const auto& root : kVisibleStorageRoots) {
+        if (path.size() <= root.size() || path.compare(0, root.size(), root) != 0 ||
+            path[root.size()] != '/') {
+            continue;
+        }
+        const std::string_view childName = path.substr(root.size() + 1);
+        if (childName.find('/') == std::string_view::npos &&
+            PathEqualsForFuseLookup(childName, name)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void NoteTrackedPathAccessLocked(uint64_t ino) {
     gInodePathCacheAccessOrder[ino] = ++gInodePathCacheAccessGeneration;
 }
@@ -591,6 +615,17 @@ int MaybeRewriteHiddenLeakErrno(fuse_req_t req, int err, const char* caller) {
 // https://android.googlesource.com/platform/packages/providers/MediaProvider/+/refs/heads/android14-release/jni/FuseDaemon.cpp#1428
 extern "C" bool WrappedShouldNotCache(void* fuse, AbiStringParam pathArg) {
     const std::string_view path = AbiStringView(pathArg);
+    if (gInPfLookup && gCurrentLookupUid != 0 && gCurrentLookupParentInode != 0 &&
+        !gCurrentLookupName.empty() && IsVisibleRootChildLookupPath(path, gCurrentLookupName) &&
+        HiddenPathPolicy::IsExactHiddenTargetPath(gCurrentLookupUid, path)) {
+        uint64_t expected = 0;
+        if (gHiddenRootParentInode.compare_exchange_strong(expected, gCurrentLookupParentInode,
+                                                           std::memory_order_relaxed)) {
+            DebugLogPrint(4, "recover hidden root parent from should_not_cache ino=%s path=%s",
+                          InodePath(gCurrentLookupParentInode).c_str(), DebugPreview(path).c_str());
+        }
+        gTrackRootHiddenLookup = true;
+    }
     if (HiddenPathPolicy::IsAnyHiddenSubtreePath(path)) {
         DebugLogPrint(4, "force uncached subtree path=%s", DebugPreview(path).c_str());
         return true;

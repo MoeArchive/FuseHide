@@ -195,6 +195,34 @@ bool ResolveVisibleParentPath(uint64_t parent, std::string* parentPathOut) {
     return true;
 }
 
+std::optional<std::string> InferVisibleRootPathFromLookup(uint64_t parent, std::string_view name) {
+    if (parent != 1 || name.empty()) {
+        return std::nullopt;
+    }
+    const std::string canonicalName = CanonicalizeHiddenEntryNameForMatch(name);
+    for (const auto& root : kVisibleStorageRoots) {
+        const size_t slash = root.rfind('/');
+        const std::string_view baseName =
+            slash == std::string_view::npos ? root : root.substr(slash + 1);
+        if (CanonicalizeHiddenEntryNameForMatch(baseName) == canonicalName) {
+            return std::string(root);
+        }
+    }
+    return std::nullopt;
+}
+
+void RememberVisibleRootParentInode(uint64_t parent, const char* reason) {
+    if (parent == 0) {
+        return;
+    }
+    uint64_t expected = 0;
+    if (gHiddenRootParentInode.compare_exchange_strong(expected, parent,
+                                                       std::memory_order_relaxed)) {
+        DebugLogPrint(4, "record hidden root parent reason=%s ino=%s", reason,
+                      InodePath(parent).c_str());
+    }
+}
+
 HiddenPathClassification ComputeHiddenPathClassification(uint32_t uid, std::string_view path) {
     if (uid == 0 || !HiddenPathPolicy::IsTestHiddenUid(uid) ||
         HiddenPathPolicy::IsHiddenRootDirectoryPath(path)) {
@@ -530,11 +558,7 @@ extern "C" void WrappedPfLookup(fuse_req_t req, uint64_t parent, const char* nam
     std::string parentPath;
     if (name != nullptr && parent != 0 && ResolveVisibleParentPath(parent, &parentPath) &&
         IsVisibleRootPath(parentPath) && HiddenPathPolicy::IsHiddenRootEntryName(uid, name)) {
-        uint64_t expected = 0;
-        if (gHiddenRootParentInode.compare_exchange_strong(expected, parent,
-                                                           std::memory_order_relaxed)) {
-            DebugLogPrint(4, "record hidden root parent=%s", InodePath(parent).c_str());
-        }
+        RememberVisibleRootParentInode(parent, "lookup_parent_path");
     }
     gInPfLookup = true;
     gCurrentLookupUid = uid;
@@ -606,6 +630,9 @@ DirectoryEntries WrappedGetDirectoryEntries(void* wrapper, uint32_t uid, AbiStri
             it->second.path = path;
             if (it->second.ino != 0) {
                 RememberTrackedPathForInode(it->second.ino, path);
+                if (IsVisibleRootPath(path)) {
+                    RememberVisibleRootParentInode(it->second.ino, "readdir_path");
+                }
             }
             DebugLogPrint(4, "record readdir path req=%lu ino=%s path=%s",
                           (unsigned long)gCurrentReaddirReqUnique,
@@ -1103,7 +1130,15 @@ extern "C" int WrappedReplyEntry(fuse_req_t req, const struct fuse_entry_param* 
         std::optional<std::string> childPath;
         if (const auto parentPath = LookupTrackedPathForInode(gCurrentLookupParentInode);
             parentPath.has_value()) {
+            if (IsVisibleRootPath(*parentPath)) {
+                RememberVisibleRootParentInode(gCurrentLookupParentInode,
+                                               "reply_entry_parent_path");
+            }
             childPath = HiddenPathPolicy::JoinPathComponent(*parentPath, gCurrentLookupName);
+        } else if (const auto visibleRootPath = InferVisibleRootPathFromLookup(
+                       gCurrentLookupParentInode, gCurrentLookupName);
+                   visibleRootPath.has_value()) {
+            childPath = *visibleRootPath;
         } else if (IsFirstComponentOfHiddenRelativePath(RuntimeState::ReqUid(req),
                                                         gCurrentLookupName)) {
             childPath =
@@ -1116,6 +1151,9 @@ extern "C" int WrappedReplyEntry(fuse_req_t req, const struct fuse_entry_param* 
         if (childPath.has_value()) {
             const uint32_t uid = RuntimeState::ReqUid(req);
             RememberTrackedPathForInode(e->ino, *childPath);
+            if (IsVisibleRootPath(*childPath)) {
+                RememberVisibleRootParentInode(e->ino, "reply_entry_visible_root");
+            }
             const bool hiddenSubtreePath =
                 HiddenPathPolicy::IsAnyHiddenSubtreePath(uid, *childPath);
             exactHiddenTargetReplyEntry =
